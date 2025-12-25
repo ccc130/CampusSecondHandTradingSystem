@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.CampusFavoritesMapper">
+    
+    <resultMap type="CampusFavorites" id="CampusFavoritesResult">
+        <result property="id"    column="id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="productId"    column="product_id"    />
+        <result property="createdAt"    column="created_at"    />
+    </resultMap>
+
+    <sql id="selectCampusFavoritesVo">
+        select id, user_id, product_id, created_at from campus_favorites
+    </sql>
+
+    <select id="selectCampusFavoritesList" parameterType="CampusFavorites" resultMap="CampusFavoritesResult">
+        <include refid="selectCampusFavoritesVo"/>
+        <where>  
+            <if test="userId != null "> and user_id = #{userId}</if>
+            <if test="productId != null "> and product_id = #{productId}</if>
+        </where>
+    </select>
+    
+    <select id="selectCampusFavoritesById" parameterType="Long" resultMap="CampusFavoritesResult">
+        <include refid="selectCampusFavoritesVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertCampusFavorites" parameterType="CampusFavorites">
+        insert into campus_favorites
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null">id,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="productId != null">product_id,</if>
+            <if test="createdAt != null">created_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null">#{id},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="productId != null">#{productId},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateCampusFavorites" parameterType="CampusFavorites">
+        update campus_favorites
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteCampusFavoritesById" parameterType="Long">
+        delete from campus_favorites where id = #{id}
+    </delete>
+
+    <delete id="deleteCampusFavoritesByIds" parameterType="String">
+        delete from campus_favorites where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.CampusCartsMapper">
+    
+    <resultMap type="CampusCarts" id="CampusCartsResult">
+        <result property="id"    column="id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="productId"    column="product_id"    />
+        <result property="quantity"    column="quantity"    />
+        <result property="addedAt"    column="added_at"    />
+    </resultMap>
+
+    <sql id="selectCampusCartsVo">
+        select id, user_id, product_id, quantity, added_at from campus_carts
+    </sql>
+
+    <select id="selectCampusCartsList" parameterType="CampusCarts" resultMap="CampusCartsResult">
+        <include refid="selectCampusCartsVo"/>
+        <where>  
+            <if test="userId != null "> and user_id = #{userId}</if>
+            <if test="productId != null "> and product_id = #{productId}</if>
+        </where>
+    </select>
+    
+    <select id="selectCampusCartsById" parameterType="Long" resultMap="CampusCartsResult">
+        <include refid="selectCampusCartsVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertCampusCarts" parameterType="CampusCarts" useGeneratedKeys="true" keyProperty="id">
+        insert into campus_carts
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="productId != null">product_id,</if>
+            <if test="quantity != null">quantity,</if>
+            <if test="addedAt != null">added_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="productId != null">#{productId},</if>
+            <if test="quantity != null">#{quantity},</if>
+            <if test="addedAt != null">#{addedAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateCampusCarts" parameterType="CampusCarts">
+        update campus_carts
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="quantity != null">quantity = #{quantity},</if>
+            <if test="addedAt != null">added_at = #{addedAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteCampusCartsById" parameterType="Long">
+        delete from campus_carts where id = #{id}
+    </delete>
+
+    <delete id="deleteCampusCartsByIds" parameterType="String">
+        delete from campus_carts where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

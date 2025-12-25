@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.CampusOrdersMapper">
+    
+    <resultMap type="CampusOrders" id="CampusOrdersResult">
+        <result property="id"    column="id"    />
+        <result property="buyerId"    column="buyer_id"    />
+        <result property="sellerId"    column="seller_id"    />
+        <result property="productId"    column="product_id"    />
+        <result property="quantity"    column="quantity"    />
+        <result property="totalPrice"    column="total_price"    />
+        <result property="status"    column="status"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="completedAt"    column="completed_at"    />
+    </resultMap>
+
+    <sql id="selectCampusOrdersVo">
+        select id, buyer_id, seller_id, product_id, quantity, total_price, status, created_at, completed_at from campus_orders
+    </sql>
+
+    <select id="selectCampusOrdersList" parameterType="CampusOrders" resultMap="CampusOrdersResult">
+        <include refid="selectCampusOrdersVo"/>
+        <where>  
+            <if test="buyerId != null "> and buyer_id = #{buyerId}</if>
+            <if test="sellerId != null "> and seller_id = #{sellerId}</if>
+            <if test="productId != null "> and product_id = #{productId}</if>
+            <if test="status != null "> and status = #{status}</if>
+        </where>
+    </select>
+    
+    <select id="selectCampusOrdersById" parameterType="Long" resultMap="CampusOrdersResult">
+        <include refid="selectCampusOrdersVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertCampusOrders" parameterType="CampusOrders">
+        insert into campus_orders
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null">id,</if>
+            <if test="buyerId != null">buyer_id,</if>
+            <if test="sellerId != null">seller_id,</if>
+            <if test="productId != null">product_id,</if>
+            <if test="quantity != null">quantity,</if>
+            <if test="totalPrice != null">total_price,</if>
+            <if test="status != null">status,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="completedAt != null">completed_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null">#{id},</if>
+            <if test="buyerId != null">#{buyerId},</if>
+            <if test="sellerId != null">#{sellerId},</if>
+            <if test="productId != null">#{productId},</if>
+            <if test="quantity != null">#{quantity},</if>
+            <if test="totalPrice != null">#{totalPrice},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="completedAt != null">#{completedAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateCampusOrders" parameterType="CampusOrders">
+        update campus_orders
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="buyerId != null">buyer_id = #{buyerId},</if>
+            <if test="sellerId != null">seller_id = #{sellerId},</if>
+            <if test="productId != null">product_id = #{productId},</if>
+            <if test="quantity != null">quantity = #{quantity},</if>
+            <if test="totalPrice != null">total_price = #{totalPrice},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="completedAt != null">completed_at = #{completedAt},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteCampusOrdersById" parameterType="Long">
+        delete from campus_orders where id = #{id}
+    </delete>
+
+    <delete id="deleteCampusOrdersByIds" parameterType="String">
+        delete from campus_orders where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

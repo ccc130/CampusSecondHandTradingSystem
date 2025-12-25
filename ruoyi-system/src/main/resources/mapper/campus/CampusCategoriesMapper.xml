@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.CampusCategoriesMapper">
+    
+    <resultMap type="CampusCategories" id="CampusCategoriesResult">
+        <result property="id"    column="id"    />
+        <result property="name"    column="name"    />
+        <result property="description"    column="description"    />
+    </resultMap>
+
+    <sql id="selectCampusCategoriesVo">
+        select id, name, description from campus_categories
+    </sql>
+
+    <select id="selectCampusCategoriesList" parameterType="CampusCategories" resultMap="CampusCategoriesResult">
+        <include refid="selectCampusCategoriesVo"/>
+        <where>  
+            <if test="name != null  and name != ''"> and name like concat('%', #{name}, '%')</if>
+        </where>
+    </select>
+    
+    <select id="selectCampusCategoriesById" parameterType="Long" resultMap="CampusCategoriesResult">
+        <include refid="selectCampusCategoriesVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertCampusCategories" parameterType="CampusCategories" useGeneratedKeys="true" keyProperty="id">
+        insert into campus_categories
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="name != null and name != ''">name,</if>
+            <if test="description != null">description,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="name != null and name != ''">#{name},</if>
+            <if test="description != null">#{description},</if>
+         </trim>
+    </insert>
+
+    <update id="updateCampusCategories" parameterType="CampusCategories">
+        update campus_categories
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="description != null">description = #{description},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteCampusCategoriesById" parameterType="Long">
+        delete from campus_categories where id = #{id}
+    </delete>
+
+    <delete id="deleteCampusCategoriesByIds" parameterType="String">
+        delete from campus_categories where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>
