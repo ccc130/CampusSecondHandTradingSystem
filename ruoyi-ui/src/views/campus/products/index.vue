@@ -89,7 +89,7 @@
         class="product-card"
       >
         <div class="product-image" @click="viewProduct(product)">
-          <img :src="product.imageUrls" :alt="product.title" @error="onImageError" />
+          <img :src="getImageUrls(product.imageUrls)[0]" :alt="product.title" @error="onImageError" />
           <div class="product-badge" v-if="product.status === 0">已售罄</div>
         </div>
         <div class="product-info">
@@ -156,10 +156,10 @@
     <el-dialog :title="productDialogTitle" v-model="productDialogVisible" width="600px" append-to-body>
       <el-form ref="productFormRef" :model="productForm" :rules="productRules" label-width="100px">
         <el-form-item label="商品标题" prop="title">
-          <el-input v-model="productForm.title" placeholder="请输入商品标题" />
+          <el-input id="product-title" v-model="productForm.title" placeholder="请输入商品标题" />
         </el-form-item>
         <el-form-item label="商品分类" prop="categoryId">
-          <el-select v-model="productForm.categoryId" placeholder="请选择商品分类" style="width: 100%;">
+          <el-select id="product-category" v-model="productForm.categoryId" placeholder="请选择商品分类" style="width: 100%;">
             <el-option
               v-for="category in categoryList"
               :key="category.id"
@@ -169,10 +169,10 @@
           </el-select>
         </el-form-item>
         <el-form-item label="商品价格" prop="price">
-          <el-input-number v-model="productForm.price" :min="0" :step="0.01" placeholder="请输入价格" style="width: 100%;" />
+          <el-input-number id="product-price" v-model="productForm.price" :min="0" :step="0.01" placeholder="请输入价格" style="width: 100%;" />
         </el-form-item>
         <el-form-item label="新旧程度" prop="conditions">
-          <el-select v-model="productForm.conditions" placeholder="请选择新旧程度" style="width: 100%;">
+          <el-select id="product-conditions" v-model="productForm.conditions" placeholder="请选择新旧程度" style="width: 100%;">
             <el-option label="全新" value="1" />
             <el-option label="9成新" value="2" />
             <el-option label="8成新" value="3" />
@@ -211,7 +211,31 @@
       <div v-if="selectedProduct" class="product-detail">
         <el-row :gutter="20">
           <el-col :span="12">
-            <img :src="selectedProduct.imageUrls" :alt="selectedProduct.title" class="detail-image" @error="onImageError" />
+            <div class="image-container">
+              <img 
+                :src="getImageUrls(selectedProduct.imageUrls)[0]" 
+                :alt="selectedProduct.title" 
+                class="detail-image" 
+                @error="onImageError" 
+                @click="openImageViewer(0)"
+                style="cursor: pointer; width: 100%; height: 300px; object-fit: cover; border-radius: 8px;"
+              />
+              <div v-if="getImageUrls(selectedProduct.imageUrls).length > 1" class="image-count">
+                {{ currentImageUrlIndex + 1 }} / {{ getImageUrls(selectedProduct.imageUrls).length }}
+              </div>
+              <!-- 图片缩略图预览 -->
+              <div v-if="getImageUrls(selectedProduct.imageUrls).length > 1" class="thumbnail-preview">
+                <div 
+                  v-for="(img, index) in getImageUrls(selectedProduct.imageUrls)" 
+                  :key="index"
+                  class="thumbnail-item"
+                  :class="{ active: index === currentImageUrlIndex }"
+                  @click="currentImageUrlIndex = index"
+                >
+                  <img :src="img" :alt="`图片${index+1}`" />
+                </div>
+              </div>
+            </div>
           </el-col>
           <el-col :span="12">
             <h2>{{ selectedProduct.title }}</h2>
@@ -248,6 +272,15 @@
                 @click="toggleFavorite(selectedProduct)"
               >
                 {{ selectedProduct.isFavorite ? '已收藏' : '收藏' }}
+              </el-button>
+              <el-button 
+                type="primary" 
+                size="large" 
+                icon="Edit"
+                @click="handleUpdate(selectedProduct)"
+                v-if="selectedProduct.userId === getCurrentUserId()"
+              >
+                编辑商品
               </el-button>
             </div>
           </el-col>
@@ -314,7 +347,7 @@
     <el-dialog title="确认购买" v-model="buyDialogVisible" width="400px" append-to-body>
       <div v-if="selectedProduct">
         <div class="buy-product-info">
-          <img :src="selectedProduct.imageUrls" :alt="selectedProduct.title" class="buy-product-image" @error="onImageError" />
+          <img :src="getImageUrls(selectedProduct.imageUrls)[0]" :alt="selectedProduct.title" class="buy-product-image" @error="onImageError" />
           <div class="buy-product-details">
             <h3>{{ selectedProduct.title }}</h3>
             <p class="buy-product-price">¥{{ selectedProduct.price }}</p>
@@ -359,12 +392,12 @@
       <el-form :model="complaintForm" :rules="complaintRules" ref="complaintRef" label-width="80px">
         <el-form-item label="投诉商品">
           <div class="complaint-product-info">
-            <img :src="selectedProduct?.imageUrls" :alt="selectedProduct?.title" class="complaint-product-image" @error="onImageError" />
+            <img :src="getImageUrls(selectedProduct?.imageUrls)[0]" :alt="selectedProduct?.title" class="complaint-product-image" @error="onImageError" />
             <span>{{ selectedProduct?.title }}</span>
           </div>
         </el-form-item>
         <el-form-item label="投诉类型" prop="title">
-          <el-select v-model="complaintForm.title" placeholder="请选择投诉类型" style="width: 100%;">
+          <el-select v-model="complaintForm.title" id="complaint-type" placeholder="请选择投诉类型" style="width: 100%;">
             <el-option label="商品质量问题" value="商品质量问题" />
             <el-option label="虚假描述" value="虚假描述" />
             <el-option label="卖家服务态度差" value="卖家服务态度差" />
@@ -374,13 +407,14 @@
         <el-form-item label="投诉内容" prop="content">
           <el-input 
             v-model="complaintForm.content" 
+            id="complaint-content"
             type="textarea" 
             placeholder="请输入投诉内容" 
             :rows="4" 
           />
         </el-form-item>
         <el-form-item label="涉及订单">
-          <el-input v-model="complaintForm.orderId" placeholder="如涉及订单，请填写订单ID" />
+          <el-input id="complaint-order-id" v-model="complaintForm.orderId" placeholder="如涉及订单，请填写订单ID" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -398,9 +432,10 @@ import { listProducts, getProducts, delProducts, addProducts, updateProducts } f
 import { listCategories } from "@/api/campus/categories"
 import { addCarts } from "@/api/campus/carts"
 import { addFavorites, listFavorites, delFavorites } from "@/api/campus/favorites"
-import { addOrders } from "@/api/campus/orders"
+import { listOrders, addOrders } from "@/api/campus/orders"
 import { addComplaints } from "@/api/campus/complaints"
 import { listReviews, addReviews } from "@/api/campus/reviews"
+import useUserStore from '@/store/modules/user'
 import payImage from "@/assets/images/pay.jpg"
 
 const { proxy } = getCurrentInstance()
@@ -424,6 +459,9 @@ const buyForm = reactive({
 const productReviews = ref([])
 const newReviewContent = ref('')
 const newReviewRating = ref(0)
+// 图片相关状态
+const imageViewerVisible = ref(false)
+const currentImageUrlIndex = ref(0)
 const complaintForm = reactive({
   title: '',
   content: '',
@@ -534,11 +572,11 @@ function checkFavorites() {
   })
 }
 
-// 获取当前用户ID（模拟）
+// 获取当前用户ID
 function getCurrentUserId() {
-  // 这里应该从store或token中获取当前用户ID
-  // 模拟返回一个用户ID
-  return 1
+  // 从store中获取当前用户ID
+  const userStore = useUserStore();
+  return userStore.id;
 }
 
 // 获取商品评论
@@ -661,6 +699,28 @@ function updateProductStatus(productId, status) {
   })
 }
 
+// 更新商品查看次数
+function updateViewCount(productId) {
+  // 获取当前商品信息
+  getProducts(productId).then(response => {
+    const product = response.data
+    product.viewCount = (product.viewCount || 0) + 1
+    updateProducts(product).then(updateResponse => {
+      console.log("商品查看次数已更新", updateResponse)
+      selectedProduct.value.viewCount = product.viewCount
+      // 也更新商品列表中的对应商品查看次数
+      const productInList = productsList.value.find(p => p.id === productId)
+      if (productInList) {
+        productInList.viewCount = product.viewCount
+      }
+    }).catch(error => {
+      console.error("更新商品查看次数失败", error)
+    })
+  }).catch(error => {
+    console.error("获取商品信息失败", error)
+  })
+}
+
 // 搜索
 function handleQuery() {
   queryParams.value.pageNum = 1
@@ -697,6 +757,8 @@ function viewProduct(product) {
   productDetailVisible.value = true
   // 加载商品评论
   getProductReviews(product.id)
+  // 更新查看次数
+  updateViewCount(product.id)
 }
 
 // 加入购物车
@@ -834,9 +896,87 @@ function getConditionText(condition) {
   return conditions[condition] || '未知'
 }
 
+// 获取图片URL数组
+function getImageUrls(imageUrl) {
+  if (!imageUrl) {
+    return [];
+  }
+  
+  if (Array.isArray(imageUrl)) {
+    return imageUrl.map(url => getSafeImageUrl(url));
+  }
+  
+  if (typeof imageUrl === 'string') {
+    // 去除首尾空格
+    imageUrl = imageUrl.trim();
+    if (imageUrl.includes(',')) {
+      // 分割并返回所有非空URL
+      const urls = imageUrl.split(',').map(url => url.trim()).filter(url => url);
+      return urls.map(url => getSafeImageUrl(url));
+    }
+    return [getSafeImageUrl(imageUrl)];
+  }
+  
+  return ['https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg'];
+}
+
+// 获取安全的图片URL
+function getSafeImageUrl(imageUrl) {
+  if (!imageUrl) {
+    return 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg'; // 默认图片
+  }
+  
+  // 如果是数组，取第一张图片
+  if (Array.isArray(imageUrl)) {
+    return imageUrl.length > 0 ? imageUrl[0] : 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
+  }
+  
+  // 如果是字符串但包含多个URL（可能以逗号或其他分隔符分隔），取第一个
+  if (typeof imageUrl === 'string') {
+    // 去除首尾空格
+    imageUrl = imageUrl.trim();
+    if (imageUrl.includes(',')) {
+      // 分割并取第一个非空URL
+      const urls = imageUrl.split(',').map(url => url.trim()).filter(url => url);
+      if (urls.length > 0) {
+        imageUrl = urls[0];
+      } else {
+        return 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
+      }
+    }
+    
+    // 如果是相对路径（以/开头但不以http/https开头），添加基础URL
+    if (imageUrl.startsWith('/') && !imageUrl.startsWith('http')) {
+      // 检查是否已在代理路径中，ruoyi项目通常图片路径以/profile/开头
+      if (imageUrl.startsWith('/profile/')) {
+        // 检查是否已经在/dev-api或/prod-api下，避免重复添加
+        if (!imageUrl.startsWith('/dev-api') && !imageUrl.startsWith('/prod-api')) {
+          // 根据环境变量确定基础API路径
+          const basePath = import.meta.env.VITE_APP_BASE_API || '/dev-api';
+          return `${basePath}${imageUrl}`;
+        }
+      }
+      return imageUrl; // 其他相对路径直接返回
+    }
+    
+    return imageUrl;
+  }
+  
+  return 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
+}
+
+// 打开图片查看器
+function openImageViewer(index = 0) {
+  currentImageUrlIndex.value = index;
+  imageViewerVisible.value = true;
+}
+
 // 图片加载错误处理
 function onImageError(event) {
-  event.target.src = '/images/default-product.png' // 默认商品图片
+  if (event && event.target) {
+    event.target.src = 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
+    event.target.onerror = null; // 防止无限循环
+  }
 }
 
 // 新增：发布商品
@@ -848,6 +988,13 @@ function handleAdd() {
 
 // 新增：编辑商品
 function handleUpdate(product) {
+  // 检查当前用户是否为商品发布者
+  const currentUserId = getCurrentUserId()
+  if (product.userId !== currentUserId) {
+    proxy.$modal.msgError("您没有权限编辑此商品")
+    return
+  }
+  
   resetProductForm()
   const productId = product.id
   getProducts(productId).then(response => {
@@ -1215,6 +1362,49 @@ onMounted(() => {
   }
 }
 
+// 图片容器样式
+.image-container {
+  position: relative;
+  
+  .image-count {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 10;
+  }
+  
+  .thumbnail-preview {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    
+    .thumbnail-item {
+      width: 60px;
+      height: 60px;
+      border: 2px solid transparent;
+      border-radius: 4px;
+      overflow: hidden;
+      cursor: pointer;
+      
+      &.active {
+        border-color: #409EFF;
+      }
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+  }
+}
+
 // 支付确认对话框样式
 .payment-content {
   text-align: center;
@@ -1250,3 +1440,12 @@ onMounted(() => {
   }
 }
 </style>
+
+<!-- 图片查看器 -->
+<el-image-viewer 
+  v-if="imageViewerVisible" 
+  :url-list="getImageUrls(selectedProduct?.imageUrls)" 
+  :initial-index="currentImageUrlIndex"
+  @close="imageViewerVisible = false"
+  @switch="(index) => currentImageUrlIndex = index"
+/>
