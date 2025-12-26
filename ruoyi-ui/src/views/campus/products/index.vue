@@ -45,6 +45,15 @@
           <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
           <el-button icon="Refresh" @click="resetQuery">重置</el-button>
           <el-button type="success" icon="Plus" @click="handleAdd" v-hasPermi="['campus:products:add']">发布商品</el-button>
+          <el-button 
+            type="danger" 
+            icon="Delete" 
+            @click="handleDeleteSelected"
+            v-hasPermi="['campus:products:remove']"
+            :disabled="multiple"
+          >
+            删除商品
+          </el-button>
         </el-col>
       </el-row>
       
@@ -82,63 +91,98 @@
     </div>
 
     <!-- 商品网格展示 -->
-    <div class="products-grid">
-      <div 
-        v-for="product in productsList" 
-        :key="product.id" 
-        class="product-card"
-      >
-        <div class="product-image" @click="viewProduct(product)">
-          <img :src="getImageUrls(product.imageUrls)[0]" :alt="product.title" @error="onImageError" />
-          <div class="product-badge" v-if="product.status === 0">已售罄</div>
-        </div>
-        <div class="product-info">
-          <h3 class="product-title" @click="viewProduct(product)">{{ product.title }}</h3>
-          <p class="product-description">{{ product.description?.substring(0, 50) }}...</p>
-          <div class="product-meta">
-            <span class="product-price">¥{{ product.price }}</span>
-            <span class="product-condition">成新度: {{ getConditionText(product.conditions) }}</span>
+    <div class="products-grid-container">
+      <div class="select-all-header">
+        <el-checkbox 
+          v-model="allChecked" 
+          :indeterminate="isIndeterminate"
+          @change="handleCheckAllChange"
+        >
+          全选
+        </el-checkbox>
+      </div>
+      <div class="products-grid">
+        <div 
+          v-for="product in productsList" 
+          :key="product.id" 
+          class="product-card"
+        >
+          <div class="product-checkbox">
+            <el-checkbox 
+              v-model="product.checked" 
+              @change="(val) => handleItemChange(val, product)"
+            ></el-checkbox>
           </div>
-          <div class="product-seller">
-            <span>卖家: {{ product.userId }}</span>
-            <span>浏览: {{ product.viewCount }}</span>
+          <div class="product-image" @click="viewProduct(product)">
+            <img :src="getImageUrls(product.imageUrls)[0]" :alt="product.title" @error="onImageError" />
+            <div class="product-badge" v-if="product.status === 0">已售罄</div>
           </div>
-        </div>
-        <div class="product-actions">
-          <el-button 
-            type="danger" 
-            size="small" 
-            icon="ShoppingBag"
-            @click="buyProduct(product)"
-            :disabled="product.status === 0"
-          >
-            立即购买
-          </el-button>
-          <el-button 
-            type="success" 
-            size="small" 
-            icon="ShoppingCart"
-            @click="addToCart(product)"
-            :disabled="product.status === 0"
-          >
-            加入购物车
-          </el-button>
-          <el-button 
-            :type="product.isFavorite ? 'warning' : 'default'" 
-            size="small" 
-            icon="Star"
-            @click="toggleFavorite(product)"
-          >
-            {{ product.isFavorite ? '已收藏' : '收藏' }}
-          </el-button>
-          <el-button 
-            type="info" 
-            size="small" 
-            icon="ChatLineRound"
-            @click="complainProduct(product)"
-          >
-            投诉
-          </el-button>
+          <div class="product-info">
+            <h3 class="product-title" @click="viewProduct(product)">{{ product.title }}</h3>
+            <p class="product-description">{{ product.description?.substring(0, 50) }}...</p>
+            <div class="product-meta">
+              <span class="product-price">¥{{ product.price }}</span>
+              <span class="product-condition">成新度: {{ getConditionText(product.conditions) }}</span>
+            </div>
+            <div class="product-seller">
+              <span>卖家: {{ getUserName(product.userId) }}</span>
+              <span>浏览: {{ product.viewCount }}</span>
+            </div>
+          </div>
+          <div class="product-actions">
+            <el-button 
+              type="danger" 
+              size="small" 
+              icon="ShoppingBag"
+              @click="buyProductFromGrid(product)"
+              :disabled="product.status === 0"
+            >
+              立即购买
+            </el-button>
+            <el-button 
+              type="success" 
+              size="small" 
+              icon="ShoppingCart"
+              @click="addToCart(product)"
+              :disabled="product.status === 0"
+            >
+              加入购物车
+            </el-button>
+            <el-button 
+              :type="product.isFavorite ? 'warning' : 'default'" 
+              size="small" 
+              icon="Star"
+              @click="toggleFavorite(product)"
+            >
+              {{ product.isFavorite ? '已收藏' : '收藏' }}
+            </el-button>
+            <el-button 
+              type="info" 
+              size="small" 
+              icon="ChatLineRound"
+              @click="complainProduct(product)"
+            >
+              投诉
+            </el-button>
+            <el-button
+              type="primary"
+              size="small"
+              icon="Edit"
+              @click="handleUpdate(product)"
+              v-hasPermi="['campus:products:edit']"
+            >
+              编辑
+            </el-button>
+            <el-button
+              type="danger"
+              size="small"
+              icon="Delete"
+              @click="handleDeleteOne(product)"
+              v-hasPermi="['campus:products:remove']"
+            >
+              删除
+            </el-button>
+          </div>
         </div>
       </div>
     </div>
@@ -242,7 +286,7 @@
             <div class="detail-price">¥{{ selectedProduct.price }}</div>
             <div class="detail-meta">
               <p>成新度: {{ getConditionText(selectedProduct.conditions) }}</p>
-              <p>卖家: {{ selectedProduct.userId }}</p>
+              <p>卖家: {{ getUserName(selectedProduct.userId) }}</p>
               <p>浏览次数: {{ selectedProduct.viewCount }}</p>
               <p>发布时间: {{ parseTime(selectedProduct.createdAt, '{y}-{m}-{d}') }}</p>
             </div>
@@ -251,7 +295,7 @@
                 type="danger" 
                 size="large" 
                 icon="ShoppingBag"
-                @click="buyProduct(selectedProduct)"
+                @click="buyProductFromDetail(selectedProduct)"
                 :disabled="selectedProduct.status === 0"
               >
                 立即购买
@@ -260,7 +304,7 @@
                 type="success" 
                 size="large" 
                 icon="ShoppingCart"
-                @click="addToCart(selectedProduct)"
+                @click="addToCartFromDetail(selectedProduct)"
                 :disabled="selectedProduct.status === 0"
               >
                 加入购物车
@@ -278,9 +322,18 @@
                 size="large" 
                 icon="Edit"
                 @click="handleUpdate(selectedProduct)"
-                v-if="selectedProduct.userId === getCurrentUserId()"
+                v-if="selectedProduct.userId === getCurrentUserId() || auth.hasPermi('campus:products:edit')"
               >
                 编辑商品
+              </el-button>
+              <el-button
+                type="danger"
+                size="large"
+                icon="Delete"
+                @click="handleDeleteOne(selectedProduct)"
+                v-if="auth.hasPermi('campus:products:remove')"
+              >
+                删除商品
               </el-button>
             </div>
           </el-col>
@@ -351,7 +404,7 @@
           <div class="buy-product-details">
             <h3>{{ selectedProduct.title }}</h3>
             <p class="buy-product-price">¥{{ selectedProduct.price }}</p>
-            <p>卖家: {{ selectedProduct.userId }}</p>
+            <p>卖家: {{ getUserName(selectedProduct.userId) }}</p>
           </div>
         </div>
         <div class="buy-options">
@@ -428,14 +481,16 @@
 </template>
 
 <script setup name="Products">
-import { listProducts, getProducts, delProducts, addProducts, updateProducts } from "@/api/campus/products"
+import { listProducts, getProducts, delProducts, batchDelProducts, addProducts, updateProducts } from "@/api/campus/products"
 import { listCategories } from "@/api/campus/categories"
 import { addCarts } from "@/api/campus/carts"
 import { addFavorites, listFavorites, delFavorites } from "@/api/campus/favorites"
 import { listOrders, addOrders } from "@/api/campus/orders"
 import { addComplaints } from "@/api/campus/complaints"
 import { listReviews, addReviews } from "@/api/campus/reviews"
+import { getUser } from "@/api/system/user"
 import useUserStore from '@/store/modules/user'
+import auth from '@/plugins/auth'
 import payImage from "@/assets/images/pay.jpg"
 
 const { proxy } = getCurrentInstance()
@@ -455,6 +510,8 @@ const selectedProduct = ref(null)
 const buyForm = reactive({
   quantity: 1
 })
+// 用于存储映射关系的数据
+const userMap = ref({})
 // 评论相关数据
 const productReviews = ref([])
 const newReviewContent = ref('')
@@ -462,6 +519,12 @@ const newReviewRating = ref(0)
 // 图片相关状态
 const imageViewerVisible = ref(false)
 const currentImageUrlIndex = ref(0)
+// 删除相关状态
+const multiple = ref(true)
+const ids = ref([])
+// 选择相关状态
+const allChecked = ref(false)
+const isIndeterminate = ref(false)
 const complaintForm = reactive({
   title: '',
   content: '',
@@ -545,12 +608,18 @@ function getList() {
   }
   
   listProducts(params).then(response => {
-    productsList.value = response.rows
+    productsList.value = response.rows.map(item => ({
+      ...item,
+      checked: false
+    }))
     total.value = response.total
     loading.value = false
     
     // 获取当前用户收藏的商品列表
     checkFavorites()
+    
+    // 获取所有相关数据的映射
+    loadRelatedData(response.rows)
   })
 }
 
@@ -753,7 +822,8 @@ function sortBy(field, order) {
 
 // 查看商品详情
 function viewProduct(product) {
-  selectedProduct.value = product
+  // 使用传入的product参数的深拷贝，完全隔离状态
+  selectedProduct.value = { ...product };
   productDetailVisible.value = true
   // 加载商品评论
   getProductReviews(product.id)
@@ -763,15 +833,17 @@ function viewProduct(product) {
 
 // 加入购物车
 function addToCart(product) {
+  // 使用传入的product参数的深拷贝，完全隔离状态
+  const productCopy = { ...product };
   const cartData = {
     userId: getCurrentUserId(),
-    productId: product.id,
+    productId: productCopy.id,
     quantity: 1,
     addedAt: new Date().toISOString().split('T')[0]
   }
   
   addCarts(cartData).then(response => {
-    proxy.$modal.msgSuccess("已成功加入购物车")
+    proxy.$modal.msgSuccess(`已成功将商品《${productCopy.title}》加入购物车`)
   }).catch(error => {
     proxy.$modal.msgError("加入购物车失败：" + error.message)
   })
@@ -779,14 +851,48 @@ function addToCart(product) {
 
 // 购买商品
 function buyProduct(product) {
-  selectedProduct.value = product
+  // 使用传入的product参数的深拷贝，完全隔离状态
+  selectedProduct.value = { ...product };
+  buyDialogVisible.value = true
+}
+
+// 从商品网格立即购买
+function buyProductFromGrid(product) {
+  // 使用传入的product参数的深拷贝，完全隔离状态
+  selectedProduct.value = { ...product };
   buyDialogVisible.value = true
 }
 
 // 显示支付确认对话框
 function showPaymentDialog() {
+  // 确保支付金额使用当前selectedProduct的价格
+  if (selectedProduct.value) {
+    selectedTotalPrice.value = selectedProduct.value.price
+  }
   buyDialogVisible.value = false
   showPaymentConfirmation.value = true
+}
+
+// 加载相关数据的映射关系
+function loadRelatedData(products) {
+  // 获取所有唯一的用户ID
+  const userIds = [...new Set(products.map(item => item.userId).filter(id => id))]
+  
+  // 获取用户信息
+  userIds.forEach(userId => {
+    if (!userMap.value[userId]) {
+      getUser(userId).then(response => {
+        userMap.value[userId] = response.data.nickName || response.data.userName || `用户${userId}`
+      }).catch(() => {
+        userMap.value[userId] = `用户${userId}`
+      })
+    }
+  })
+}
+
+// 根据ID获取用户名称
+function getUserName(userId) {
+  return userMap.value[userId] || `用户${userId}`
 }
 
 // 确认支付
@@ -795,12 +901,19 @@ function confirmPayment() {
   proxy.$modal.msgSuccess("支付成功！")
   
   // 创建订单（数量固定为1）
+  // 使用selectedProduct的当前值的副本，避免后续状态变化影响
+  const currentProduct = {
+    id: selectedProduct.value.id,
+    userId: selectedProduct.value.userId,
+    price: selectedProduct.value.price
+  };
+  
   const orderData = {
     buyerId: getCurrentUserId(),
-    sellerId: selectedProduct.value.userId,
-    productId: selectedProduct.value.id,
+    sellerId: currentProduct.userId,
+    productId: currentProduct.id,
     quantity: 1, // 固定为1
-    totalPrice: selectedProduct.value.price, // 价格即为总价
+    totalPrice: currentProduct.price, // 价格即为总价
     status: 2, // 已付款，待发货
     createdAt: new Date().toISOString().split('T')[0],
     completedAt: null
@@ -809,28 +922,55 @@ function confirmPayment() {
   addOrders(orderData).then(response => {
     proxy.$modal.msgSuccess("订单创建成功")
     // 更新商品状态为已售罄
-    updateProductStatus(selectedProduct.value.id, 0)
+    updateProductStatus(currentProduct.id, 0)
   }).catch(error => {
     proxy.$modal.msgError("订单创建失败：" + error.message)
   })
 }
 
+// 从商品详情对话框加入购物车
+function addToCartFromDetail(product) {
+  // 使用传入的product参数的深拷贝，完全隔离状态
+  const productCopy = { ...product };
+  const cartData = {
+    userId: getCurrentUserId(),
+    productId: productCopy.id,
+    quantity: 1,
+    addedAt: new Date().toISOString().split('T')[0]
+  }
+  
+  addCarts(cartData).then(response => {
+    proxy.$modal.msgSuccess(`已成功将商品《${productCopy.title}》加入购物车`)
+  }).catch(error => {
+    proxy.$modal.msgError("加入购物车失败：" + error.message)
+  })
+}
+
+// 从商品详情对话框立即购买
+function buyProductFromDetail(product) {
+  // 使用传入的product参数的深拷贝，完全隔离状态
+  selectedProduct.value = { ...product };
+  buyDialogVisible.value = true
+}
+
 // 切换收藏状态
 function toggleFavorite(product) {
-  if (product.isFavorite) {
+  // 使用传入的product参数的副本，避免状态共享问题
+  const productCopy = { ...product };
+  if (productCopy.isFavorite) {
     // 取消收藏
     const favoriteParams = {
       pageNum: 1,
       pageSize: 1,
       userId: getCurrentUserId(),
-      productId: product.id
+      productId: productCopy.id
     }
     
     listFavorites(favoriteParams).then(response => {
       if (response.rows && response.rows.length > 0) {
         const favoriteId = response.rows[0].id
         delFavorites(favoriteId).then(() => {
-          product.isFavorite = false
+          product.isFavorite = false  // 注意：这里仍然更新原对象的属性，以保持UI响应性
           proxy.$modal.msgSuccess("已取消收藏")
         })
       }
@@ -839,12 +979,12 @@ function toggleFavorite(product) {
     // 添加收藏
     const favoriteData = {
       userId: getCurrentUserId(),
-      productId: product.id,
+      productId: productCopy.id,
       createdAt: new Date().toISOString().split('T')[0]
     }
     
     addFavorites(favoriteData).then(response => {
-      product.isFavorite = true
+      product.isFavorite = true  // 注意：这里仍然更新原对象的属性，以保持UI响应性
       proxy.$modal.msgSuccess("收藏成功")
     }).catch(error => {
       proxy.$modal.msgError("收藏失败：" + error.message)
@@ -854,7 +994,8 @@ function toggleFavorite(product) {
 
 // 投诉商品
 function complainProduct(product) {
-  selectedProduct.value = product
+  // 使用传入的product参数的深拷贝，完全隔离状态
+  selectedProduct.value = { ...product };
   complaintForm.productId = product.id
   complaintForm.complainantId = getCurrentUserId()
   complaintForm.accusedId = product.userId // 设置被投诉人为商品卖家
@@ -988,9 +1129,11 @@ function handleAdd() {
 
 // 新增：编辑商品
 function handleUpdate(product) {
-  // 检查当前用户是否为商品发布者
+  // 检查当前用户是否为商品发布者或拥有编辑权限
   const currentUserId = getCurrentUserId()
-  if (product.userId !== currentUserId) {
+  const hasEditPermission = auth.hasPermi('campus:products:edit')
+  
+  if (product.userId !== currentUserId && !hasEditPermission) {
     proxy.$modal.msgError("您没有权限编辑此商品")
     return
   }
@@ -1046,6 +1189,58 @@ function submitProductForm() {
   })
 }
 
+// 处理全选
+function handleCheckAllChange(val) {
+  productsList.value.forEach(product => {
+    product.checked = val;
+  });
+  updateCheckedStatus();
+}
+
+// 处理单个选择变化
+function handleItemChange(val, product) {
+  product.checked = val;
+  updateCheckedStatus();
+}
+
+// 更新选中状态
+function updateCheckedStatus() {
+  const checkedCount = productsList.value.filter(p => p.checked).length;
+  const totalCount = productsList.value.length;
+  
+  allChecked.value = checkedCount === totalCount && totalCount > 0;
+  isIndeterminate.value = checkedCount > 0 && checkedCount < totalCount;
+  
+  // 更新ids数组
+  ids.value = productsList.value.filter(p => p.checked).map(p => p.id);
+  multiple.value = ids.value.length === 0;
+}
+
+// 单个删除
+function handleDeleteOne(product) {
+  const productIds = [product.id];
+  deleteProducts(productIds);
+}
+
+// 批量删除
+function handleDeleteSelected() {
+  if (!ids.value.length) {
+    proxy.$modal.msgError("请选择要删除的商品");
+    return;
+  }
+  deleteProducts(ids.value);
+}
+
+// 删除商品的通用方法
+function deleteProducts(productIds) {
+  proxy.$modal.confirm(`是否确认删除编号为 "${productIds.join(", ")}" 的商品？`).then(() => {
+    return batchDelProducts(productIds.join(","));
+  }).then(() => {
+    getList();
+    proxy.$modal.msgSuccess("删除成功");
+  }).catch(() => {});
+}
+
 // 初始化
 onMounted(() => {
   getCategoryList()
@@ -1073,10 +1268,19 @@ onMounted(() => {
   }
 }
 
+.products-grid-container {
+  margin-top: 15px;
+}
+
+.select-all-header {
+  margin-bottom: 15px;
+  padding: 0 15px;
+}
+
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(2, 1fr); /* 两列布局 */
+  gap: 25px;
   margin-bottom: 20px;
 }
 
@@ -1086,10 +1290,19 @@ onMounted(() => {
   overflow: hidden;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   transition: transform 0.3s, box-shadow 0.3s;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   
   &:hover {
     transform: translateY(-5px);
     box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.15);
+  }
+  
+  .product-checkbox {
+    padding: 10px 10px 0 10px;
+    display: flex;
+    justify-content: flex-end;
   }
   
   .product-image {
@@ -1124,6 +1337,7 @@ onMounted(() => {
   
   .product-info {
     padding: 15px;
+    flex: 1;
     
     .product-title {
       font-size: 16px;
@@ -1178,15 +1392,23 @@ onMounted(() => {
   }
   
   .product-actions {
-    padding: 0 15px 15px;
+    padding: 0 15px 15px 15px;
     display: flex;
-    gap: 8px;
     flex-wrap: wrap;
+    gap: 8px;
     
     .el-button {
-      flex: 1;
-      min-width: 70px;
+      flex: calc(50% - 4px);
       font-size: 12px;
+      padding: 5px 8px;
+      
+      &:not(:nth-child(2n)) {
+        margin-right: 4px;
+      }
+      
+      &:nth-child(n+5) {
+        margin-top: 5px;
+      }
     }
   }
 }

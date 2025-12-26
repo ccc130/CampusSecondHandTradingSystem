@@ -19,7 +19,7 @@
       >
         <el-checkbox 
           v-model="cart.checked" 
-          @change="handleSelectionChange([cart])"
+          @change="handleSelectionChange"
           class="cart-checkbox"
         />
         
@@ -34,10 +34,6 @@
             <span class="cart-item-price">¥{{ cart.productPrice }}</span>
             <span class="cart-item-condition">成新度: {{ getConditionText(cart.productCondition) }}</span>
           </div>
-        </div>
-        
-        <div class="cart-item-quantity">
-          <el-tag type="success" size="small">1</el-tag>
         </div>
         
         <div class="cart-item-total">
@@ -108,11 +104,20 @@
       </template>
     </el-dialog>
     
-    <!-- 结算弹窗 -->
+    <!-- 结算弹窗 - 现在用于购物车结算和立即购买 -->
     <el-dialog title="订单结算" v-model="showCheckoutDialog" width="600px" append-to-body>
       <div class="checkout-content">
         <h3>确认订单信息</h3>
-        <div class="selected-items">
+        <!-- 立即购买的订单信息 -->
+        <div v-if="selectedProduct && !cartsList.some(c => c.checked)" class="selected-item">
+          <div class="item-info">
+            <p class="item-title">{{ selectedProduct.title }}</p>
+            <p class="item-price">¥{{ selectedProduct.price }} × 1</p>
+          </div>
+          <div class="item-total">¥{{ selectedProduct.price.toFixed(2) }}</div>
+        </div>
+        <!-- 购物车选中商品的订单信息 -->
+        <div v-else class="selected-items">
           <div 
             v-for="cart in cartsList.filter(c => c.checked)" 
             :key="cart.id" 
@@ -175,6 +180,7 @@
 import { listCarts, getCarts, delCarts, addCarts, updateCarts } from "@/api/campus/carts"
 import { listProducts, getProducts, updateProducts } from "@/api/campus/products"
 import { addOrders } from "@/api/campus/orders"
+import useUserStore from '@/store/modules/user'
 import payImage from "@/assets/images/pay.jpg"
 
 const { proxy } = getCurrentInstance()
@@ -217,33 +223,39 @@ function getList() {
     
     // 保存当前的选中状态
     const currentCheckedStatus = new Map()
-    cartsList.value.forEach(cart => {
-      if (cart.checked) {
-        currentCheckedStatus.set(cart.id, true)
-      }
-    })
+    if (cartsList.value && cartsList.value.length > 0) {
+      cartsList.value.forEach(cart => {
+        if (cart.checked) {
+          currentCheckedStatus.set(cart.id, true)
+        }
+      })
+    }
     
     // 获取商品详细信息并合并到购物车数据中
     const cartPromises = cartItems.map(cart => {
+      // 使用立即执行函数表达式（IIFE）或创建局部作用域防止变量共享
+      const cartCopy = { ...cart }; // 创建cart的副本
       return new Promise((resolve) => {
         // 获取商品详细信息
-        listProducts({ id: cart.productId }).then(productResponse => {
-          if (productResponse.rows && productResponse.rows.length > 0) {
-            const product = productResponse.rows[0]
+        getProducts(cartCopy.productId).then(productResponse => {
+          if (productResponse.data) {
+            const product = productResponse.data
             // 将商品信息合并到购物车项目中
-            Object.assign(cart, {
+            // 使用与商品列表页面一致的图片处理逻辑
+            const firstImageUrl = getImageUrls(product.imageUrls)[0] || product.imageUrls;
+            Object.assign(cartCopy, {
               productTitle: product.title,
               productDescription: product.description,
               productPrice: product.price,
-              productImageUrls: product.imageUrls,
+              productImageUrls: firstImageUrl,
               productCondition: product.conditions,
               productUserId: product.userId, // 保存商品的卖家ID
               // 保留原有的选中状态
-              checked: currentCheckedStatus.has(cart.id)
+              checked: currentCheckedStatus.has(cartCopy.id)
             })
           } else {
             // 如果没有找到商品信息，仍保留原有数据
-            Object.assign(cart, {
+            Object.assign(cartCopy, {
               productTitle: '未知商品',
               productDescription: '商品信息获取失败',
               productPrice: 0,
@@ -251,13 +263,13 @@ function getList() {
               productCondition: '',
               productUserId: null, // 未知卖家ID
               // 保留原有的选中状态
-              checked: currentCheckedStatus.has(cart.id)
+              checked: currentCheckedStatus.has(cartCopy.id)
             })
           }
-          resolve(cart)
+          resolve(cartCopy)
         }).catch(() => {
           // 如果获取商品信息失败，仍保留原有数据
-          Object.assign(cart, {
+          Object.assign(cartCopy, {
             productTitle: '未知商品',
             productDescription: '商品信息获取失败',
             productPrice: 0,
@@ -265,26 +277,28 @@ function getList() {
             productCondition: '',
             productUserId: null, // 未知卖家ID
             // 保留原有的选中状态
-            checked: currentCheckedStatus.has(cart.id)
+            checked: currentCheckedStatus.has(cartCopy.id)
           })
-          resolve(cart)
+          resolve(cartCopy)
         })
       })
     })
     
     Promise.all(cartPromises).then(results => {
+      // 一次性更新整个列表，避免分步更新导致的不一致
       cartsList.value = results
       loading.value = false
-      calculateSelectedInfo()
+      // 确保选中状态与新数据同步
+      updateSelectionStatus()
     })
   })
 }
 
-// 获取当前用户ID（模拟）
+// 获取当前用户ID
 function getCurrentUserId() {
-  // 这里应该从store或token中获取当前用户ID
-  // 模拟返回一个用户ID
-  return 1
+  // 从store中获取当前用户ID
+  const userStore = useUserStore();
+  return userStore.id;
 }
 
 // 获取新旧程度文本
@@ -301,7 +315,10 @@ function getConditionText(condition) {
 
 // 图片加载错误处理
 function onImageError(event) {
-  event.target.src = '/images/default-product.png' // 默认商品图片
+  if (event && event.target) {
+    event.target.src = 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
+    event.target.onerror = null; // 防止无限循环
+  }
 }
 
 // 更新购物车中商品数量
@@ -313,21 +330,19 @@ function updateCartQuantity(cart) {
 }
 
 // 单个商品选择变化
-function handleSelectionChange(selection) {
-  // 更新选中状态
-  cartsList.value.forEach(cart => {
-    const isSelected = selection.some(item => item.id === cart.id)
-    cart.checked = isSelected
-  })
-  
+function handleSelectionChange() {
+  // 由于v-model绑定，cart.checked状态已经自动更新
+  // 只需要更新选中状态即可
   updateSelectionStatus()
 }
 
 // 全选/取消全选
 function handleSelectAll(checked) {
-  cartsList.value.forEach(cart => {
-    cart.checked = checked
-  })
+  if (cartsList.value && cartsList.value.length > 0) {
+    cartsList.value.forEach(cart => {
+      cart.checked = checked
+    })
+  }
   updateSelectionStatus()
 }
 
@@ -344,25 +359,58 @@ function updateSelectionStatus() {
 
 // 计算选中商品的总价
 function calculateSelectedInfo() {
-  selectedTotalPrice.value = cartsList.value
-    .filter(cart => cart.checked)
-    .reduce((total, cart) => total + cart.productPrice, 0)
+  if (cartsList.value && cartsList.value.length > 0) {
+    selectedTotalPrice.value = cartsList.value
+      .filter(cart => cart.checked)
+      .reduce((total, cart) => total + (cart.productPrice || 0), 0)
+  } else {
+    selectedTotalPrice.value = 0
+  }
 }
 
 // 立即购买
 function buyNow(cart) {
-  // 这里应该跳转到订单确认页面或直接购买
-  selectedProduct.value = cart
-  buyDialogVisible.value = true
+  // 创建cart的副本，确保使用正确的数据
+  const cartCopy = { ...cart };
+  // 从商品API获取完整商品信息，确保有正确的商品详情
+  getProducts(cartCopy.productId).then(productResponse => {
+    if (productResponse.data) {
+      const product = productResponse.data
+      // 将完整商品信息赋值给selectedProduct
+      // 使用与商品列表页面一致的图片处理逻辑
+      const firstImageUrl = getImageUrls(product.imageUrls)[0] || product.imageUrls;
+      selectedProduct.value = {
+        id: product.id,
+        title: product.title,
+        price: product.price,
+        imageUrls: firstImageUrl,
+        userId: product.userId,
+        description: product.description,
+        condition: product.conditions
+      }
+      // 设置总价用于支付
+      selectedTotalPrice.value = product.price
+      buyDialogVisible.value = true
+    } else {
+      proxy.$modal.msgError("商品信息获取失败")
+    }
+  }).catch(error => {
+    console.error("获取商品详情失败", error)
+    proxy.$modal.msgError("商品信息获取失败")
+  })
 }
 
 // 显示支付对话框
 function showBuyPaymentDialog() {
   buyDialogVisible.value = false
-  showPaymentDialog.value = true
+  // 确保支付金额已设置
+  if (selectedProduct.value) {
+    selectedTotalPrice.value = selectedProduct.value.price
+  }
+  showCheckoutDialog.value = true // 使用与购物车结算相同的结算对话框
 }
 
-// 完成结算
+// 完成结算 - 现在用于立即购买流程
 function completeCheckout() {
   showCheckoutDialog.value = false
   // 打开支付二维码弹窗
@@ -370,39 +418,65 @@ function completeCheckout() {
   proxy.$modal.msgSuccess("请扫描二维码完成支付")
 }
 
-// 确认支付
+// 确认支付 - 处理立即购买和购物车结算
 function confirmPayment() {
   showPaymentDialog.value = false
   proxy.$modal.msgSuccess("支付成功！")
   
-  // 为选中的每个购物车项目创建订单
-  const selectedCarts = cartsList.value.filter(cart => cart.checked)
-  const orderPromises = []
+  // 区分是购物车结算还是立即购买
+  const isFromCartCheckout = cartsList.value.some(cart => cart.checked) // 检查是否有选中的购物车项目
+  let orderPromises = []
+  let itemsToProcess = []
   
-  selectedCarts.forEach(cart => {
+  if (isFromCartCheckout) {
+    // 购物车结算流程
+    const selectedCarts = cartsList.value.filter(cart => cart.checked)
+    itemsToProcess = selectedCarts
+    
+    selectedCarts.forEach(cart => {
+      // 创建cart的副本，确保使用正确的数据
+      const cartCopy = { ...cart };
+      const orderData = {
+        buyerId: getCurrentUserId(),
+        sellerId: cartCopy.productUserId, // 使用商品的卖家ID
+        productId: cartCopy.productId,
+        quantity: 1, // 固定为1
+        totalPrice: cartCopy.productPrice, // 价格即为总价
+        status: 2, // 已付款，待发货
+        createdAt: new Date().toISOString().split('T')[0],
+        completedAt: null
+      }
+      
+      orderPromises.push(addOrders(orderData))
+    })
+  } else if (selectedProduct.value) {
+    // 立即购买流程
+    itemsToProcess = [selectedProduct.value]
+    
     const orderData = {
       buyerId: getCurrentUserId(),
-      sellerId: cart.productUserId, // 使用商品的卖家ID
-      productId: cart.productId,
+      sellerId: selectedProduct.value.userId, // 使用商品的卖家ID
+      productId: selectedProduct.value.id,
       quantity: 1, // 固定为1
-      totalPrice: cart.productPrice, // 价格即为总价
+      totalPrice: selectedProduct.value.price, // 价格即为总价
       status: 2, // 已付款，待发货
       createdAt: new Date().toISOString().split('T')[0],
       completedAt: null
     }
     
     orderPromises.push(addOrders(orderData))
-  })
+  }
   
   // 批量创建订单
   Promise.all(orderPromises)
     .then(() => {
-      proxy.$modal.msgSuccess(`成功创建 ${selectedCarts.length} 个订单`)
+      proxy.$modal.msgSuccess(`成功创建 ${itemsToProcess.length} 个订单`)
       
       // 更新对应商品的状态（将商品状态更新为已售罄）
-      const updateProductPromises = selectedCarts.map(cart => {
+      const updateProductPromises = itemsToProcess.map(item => {
+        const productId = item.productId || item.id
         // 获取商品详细信息
-        return getProducts(cart.productId).then(productResponse => {
+        return getProducts(productId).then(productResponse => {
           const product = productResponse.data
           // 更新商品状态为已售罄
           product.status = 0 // 已售罄
@@ -416,12 +490,21 @@ function confirmPayment() {
       return Promise.all(updateProductPromises)
     })
     .then(() => {
-      // 清除已支付的商品（从购物车中删除选中的商品）
-      const deletePromises = selectedIds.value.map(id => delCarts(id))
-      return Promise.all(deletePromises)
+      if (isFromCartCheckout) {
+        // 清除已支付的商品（从购物车中删除选中的商品）
+        const deletePromises = selectedIds.value.map(id => delCarts(id))
+        return Promise.all(deletePromises)
+      } else {
+        // 立即购买不需要删除购物车项目（因为商品原本就不在购物车中选中状态）
+        // 但需要重置selectedProduct
+        selectedProduct.value = null
+        return Promise.resolve()
+      }
     })
     .then(() => {
-      proxy.$modal.msgSuccess(`成功清除 ${selectedIds.value.length} 件已支付商品`)
+      if (isFromCartCheckout) {
+        proxy.$modal.msgSuccess(`成功清除 ${selectedIds.value.length} 件已支付商品`)
+      }
       // 刷新购物车列表
       getList()
       // 重置选中状态
@@ -449,6 +532,9 @@ function handleBatchDelete() {
     })
     .then(() => {
       proxy.$modal.msgSuccess("删除成功")
+      // 清空选中状态，避免状态残留
+      selectedIds.value = []
+      // 重新获取数据以确保前后端一致
       getList()
     })
     .catch(() => {})
@@ -456,9 +542,11 @@ function handleBatchDelete() {
 
 // 删除单个商品
 function handleDelete(cart) {
-  proxy.$modal.confirm(`确定要从购物车中删除 ${cart.productTitle} 吗？`)
+  // 创建cart的副本，确保使用正确的数据
+  const cartCopy = { ...cart };
+  proxy.$modal.confirm(`确定要从购物车中删除 ${cartCopy.productTitle} 吗？`)
     .then(() => {
-      return delCarts(cart.id)
+      return delCarts(cartCopy.id)
     })
     .then(() => {
       proxy.$modal.msgSuccess("删除成功")
@@ -481,8 +569,83 @@ function checkoutSelected() {
 
 // 跳转到商品列表页
 function goToProducts() {
-  // 这里应该跳转到商品列表页
-  console.log('跳转到商品列表页')
+  // 使用proxy访问router进行页面跳转到商品列表页
+  proxy.$router.push('/products')
+}
+
+// 获取图片URL数组
+function getImageUrls(imageUrl) {
+  if (!imageUrl) {
+    return [];
+  }
+  
+  if (Array.isArray(imageUrl)) {
+    return imageUrl.map(url => getSafeImageUrl(url));
+  }
+  
+  if (typeof imageUrl === 'string') {
+    // 去除首尾空格
+    imageUrl = imageUrl.trim();
+    if (imageUrl.includes(',')) {
+      // 分割并返回所有非空URL
+      const urls = imageUrl.split(',').map(url => url.trim()).filter(url => url);
+      return urls.map(url => getSafeImageUrl(url));
+    }
+    return [getSafeImageUrl(imageUrl)];
+  }
+  
+  return ['https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg'];
+}
+
+// 获取安全的图片URL
+function getSafeImageUrl(imageUrl) {
+  if (!imageUrl) {
+    return 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg'; // 默认图片
+  }
+  
+  // 如果是数组，取第一张图片
+  if (Array.isArray(imageUrl)) {
+    return imageUrl.length > 0 ? imageUrl[0] : 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
+  }
+  
+  // 如果是字符串但包含多个URL（可能以逗号或其他分隔符分隔），取第一个
+  if (typeof imageUrl === 'string') {
+    // 去除首尾空格
+    imageUrl = imageUrl.trim();
+    if (imageUrl.includes(',')) {
+      // 分割并取第一个非空URL
+      const urls = imageUrl.split(',').map(url => url.trim()).filter(url => url);
+      if (urls.length > 0) {
+        imageUrl = urls[0];
+      } else {
+        return 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
+      }
+    }
+    
+    // 如果是相对路径（以/开头但不以http/https开头），添加基础URL
+    if (imageUrl.startsWith('/') && !imageUrl.startsWith('http')) {
+      // 检查是否已在代理路径中，ruoyi项目通常图片路径以/profile/开头
+      if (imageUrl.startsWith('/profile/')) {
+        // 检查是否已经在/dev-api或/prod-api下，避免重复添加
+        if (!imageUrl.startsWith('/dev-api') && !imageUrl.startsWith('/prod-api')) {
+          // 根据环境变量确定基础API路径
+          const basePath = import.meta.env.VITE_APP_BASE_API || '/dev-api';
+          return `${basePath}${imageUrl}`;
+        }
+      }
+      return imageUrl; // 其他相对路径直接返回
+    }
+    
+    // 如果是相对路径但不是以/开头，添加基础API路径
+    if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
+      const basePath = import.meta.env.VITE_APP_BASE_API || '/dev-api';
+      return `${basePath}${imageUrl}`;
+    }
+    
+    return imageUrl;
+  }
+  
+  return 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
 }
 
 onMounted(() => {
@@ -773,6 +936,16 @@ onMounted(() => {
     }
   }
 }
+
+.buy-product-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.payment-content {
+    }
 
 @media (max-width: 768px) {
   .cart-item {

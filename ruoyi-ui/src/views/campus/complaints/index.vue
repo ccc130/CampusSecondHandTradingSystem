@@ -6,7 +6,7 @@
           <el-form-item label="投诉人" prop="complainantId">
             <el-input
               v-model="queryParams.complainantId"
-              placeholder="请输入投诉人"
+              placeholder="请输入投诉人ID"
               clearable
               @keyup.enter="handleQuery"
             />
@@ -16,7 +16,7 @@
           <el-form-item label="被投诉人" prop="accusedId">
             <el-input
               v-model="queryParams.accusedId"
-              placeholder="请输入被投诉人"
+              placeholder="请输入被投诉人ID"
               clearable
               @keyup.enter="handleQuery"
             />
@@ -26,7 +26,7 @@
           <el-form-item label="涉及商品" prop="productId">
             <el-input
               v-model="queryParams.productId"
-              placeholder="请输入涉及商品"
+              placeholder="请输入涉及商品ID"
               clearable
               @keyup.enter="handleQuery"
             />
@@ -36,7 +36,7 @@
           <el-form-item label="涉及订单" prop="orderId">
             <el-input
               v-model="queryParams.orderId"
-              placeholder="请输入涉及订单"
+              placeholder="请输入涉及订单ID"
               clearable
               @keyup.enter="handleQuery"
             />
@@ -94,15 +94,6 @@
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button
-          type="primary"
-          plain
-          icon="Plus"
-          @click="handleAdd"
-          v-hasPermi="['campus:complaints:add']"
-        >新增</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
           type="success"
           plain
           icon="Edit"
@@ -136,10 +127,26 @@
     <el-table v-loading="loading" :data="complaintsList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="投诉ID" align="center" prop="id" width="80" />
-      <el-table-column label="投诉人" align="center" prop="complainantId" width="100" />
-      <el-table-column label="被投诉人" align="center" prop="accusedId" width="100" />
-      <el-table-column label="涉及商品" align="center" prop="productId" width="100" />
-      <el-table-column label="涉及订单" align="center" prop="orderId" width="100" />
+      <el-table-column label="投诉人" align="center" prop="complainantId" width="100">
+        <template #default="scope">
+          {{ getUserName(scope.row.complainantId) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="被投诉人" align="center" prop="accusedId" width="100">
+        <template #default="scope">
+          {{ getUserName(scope.row.accusedId) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="涉及商品" align="center" prop="productId" width="100">
+        <template #default="scope">
+          {{ getProductName(scope.row.productId) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="涉及订单" align="center" prop="orderId" width="100">
+        <template #default="scope">
+          {{ getOrderName(scope.row.orderId) }}
+        </template>
+      </el-table-column>
       <el-table-column label="投诉标题" align="center" prop="title" show-overflow-tooltip />
       <el-table-column label="处理状态" align="center" prop="status" width="100">
         <template #default="scope">
@@ -180,24 +187,24 @@
         <el-row>
           <el-col :span="12">
             <el-form-item label="投诉人" prop="complainantId">
-              <el-input v-model="form.complainantId" placeholder="请输入投诉人ID" />
+              <el-input v-model="form.complainantId" placeholder="请输入投诉人ID" readonly />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="被投诉人" prop="accusedId">
-              <el-input v-model="form.accusedId" placeholder="请输入被投诉人ID" />
+              <el-input v-model="form.accusedId" placeholder="请输入被投诉人ID" readonly />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row>
           <el-col :span="12">
             <el-form-item label="涉及商品" prop="productId">
-              <el-input v-model="form.productId" placeholder="请输入商品ID" />
+              <el-input v-model="form.productId" placeholder="请输入商品ID" readonly />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="涉及订单" prop="orderId">
-              <el-input v-model="form.orderId" placeholder="请输入订单ID" />
+              <el-input v-model="form.orderId" placeholder="请输入订单ID" readonly />
             </el-form-item>
           </el-col>
         </el-row>
@@ -271,12 +278,12 @@
         <el-row>
           <el-col :span="12">
             <el-form-item label="涉及商品" prop="productId">
-              <el-input v-model="form.productId" placeholder="请输入商品ID" readonly />
+              <el-input v-model="currentProductName" placeholder="请输入商品ID" readonly />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="涉及订单" prop="orderId">
-              <el-input v-model="form.orderId" placeholder="请输入订单ID" readonly />
+              <el-input v-model="currentOrderName" placeholder="请输入订单ID" readonly />
             </el-form-item>
           </el-col>
         </el-row>
@@ -356,6 +363,11 @@
 
 <script setup name="Complaints">
 import { listComplaints, getComplaints, delComplaints, addComplaints, updateComplaints } from "@/api/campus/complaints"
+import { getUser } from "@/api/system/user"
+import { getProducts } from "@/api/campus/products"
+import { getOrders } from "@/api/campus/orders"
+import useUserStore from '@/store/modules/user'
+import { checkPermi } from '@/utils/permission'
 
 const { proxy } = getCurrentInstance()
 const { campus_complaints_status } = proxy.useDict('campus_complaints_status')
@@ -371,6 +383,14 @@ const multiple = ref(true)
 const total = ref(0)
 const title = ref("")
 const titleApprove = ref("")
+// 用于存储映射关系的数据
+const userMap = ref({})
+const productMap = ref({})
+const orderMap = ref({})
+
+// 当前订单名称
+const currentOrderName = ref("")
+const currentProductName = ref("")
 
 // 审核对话框表单引用
 const complaintsRef = ref(null)
@@ -407,10 +427,93 @@ const { queryParams, form, rules } = toRefs(data)
 function getList() {
   loading.value = true
   listComplaints(queryParams.value).then(response => {
-    complaintsList.value = response.rows
-    total.value = response.total
+    // 检查用户是否拥有编辑权限
+    const hasEditPerm = hasEditPermission()
+    
+    if (!hasEditPerm) {
+      const currentUserId = getCurrentUserId()
+      if (currentUserId) {
+        // 如果没有编辑权限，只显示当前用户相关的投诉数据（作为投诉人或被投诉人）
+        complaintsList.value = response.rows.filter(item => 
+          item.complainantId == currentUserId || item.accusedId == currentUserId
+        )
+        // 更新总数为过滤后的数量
+        total.value = complaintsList.value.length
+      } else {
+        complaintsList.value = []
+        total.value = 0
+      }
+    } else {
+      // 有编辑权限，显示所有数据
+      complaintsList.value = response.rows
+      total.value = response.total
+    }
+    
     loading.value = false
+    
+    // 获取所有相关数据的映射
+    loadRelatedData(complaintsList.value)
   })
+}
+
+// 加载相关数据的映射关系
+function loadRelatedData(complaints) {
+  // 获取所有唯一的用户ID
+  const userIds = [...new Set(complaints.flatMap(item => [item.complainantId, item.accusedId, item.handlerId]).filter(id => id))]
+  
+  // 获取所有唯一的商品ID
+  const productIds = [...new Set(complaints.map(item => item.productId).filter(id => id))]
+  
+  // 获取所有唯一的订单ID
+  const orderIds = [...new Set(complaints.map(item => item.orderId).filter(id => id))]
+  
+  // 获取用户信息
+  userIds.forEach(userId => {
+    if (!userMap.value[userId]) {
+      getUser(userId).then(response => {
+        userMap.value[userId] = response.data.nickName || response.data.userName || `用户${userId}`
+      }).catch(() => {
+        userMap.value[userId] = `用户${userId}`
+      })
+    }
+  })
+  
+  // 获取商品信息
+  productIds.forEach(productId => {
+    if (!productMap.value[productId]) {
+      getProducts(productId).then(response => {
+        productMap.value[productId] = response.data.title || `商品${productId}`
+      }).catch(() => {
+        productMap.value[productId] = `商品${productId}`
+      })
+    }
+  })
+  
+  // 获取订单信息
+  orderIds.forEach(orderId => {
+    if (!orderMap.value[orderId]) {
+      getOrders(orderId).then(response => {
+        orderMap.value[orderId] = `订单${orderId}` // 订单可能需要显示更多信息，这里简化处理
+      }).catch(() => {
+        orderMap.value[orderId] = `订单${orderId}`
+      })
+    }
+  })
+}
+
+// 根据ID获取用户名称
+function getUserName(userId) {
+  return userMap.value[userId] || `用户${userId}`
+}
+
+// 根据ID获取商品名称
+function getProductName(productId) {
+  return productMap.value[productId] || `商品${productId}`
+}
+
+// 根据ID获取订单名称
+function getOrderName(orderId) {
+  return orderMap.value[orderId] || `订单${orderId}`
 }
 
 // 取消按钮
@@ -449,11 +552,14 @@ function resetQuery() {
   handleQuery()
 }
 
-// 获取当前用户ID（模拟）
+// 获取当前用户ID
 function getCurrentUserId() {
-  // 这里应该从store或token中获取当前用户ID
-  // 模拟返回一个用户ID
-  return 1
+  return useUserStore().id
+}
+
+// 检查用户是否拥有编辑权限
+function hasEditPermission() {
+  return checkPermi(['campus:complaints:edit'])
 }
 
 // 多选框选中数据
@@ -493,6 +599,9 @@ function handleApprove(row) {
     form.value.handlerId = getCurrentUserId()
     // 设置默认处理时间为当前时间
     form.value.handledAt = new Date().toISOString().split('T')[0]
+    // 设置当前商品名称和订单名称
+    currentProductName.value = getProductName(response.data.productId)
+    currentOrderName.value = getOrderName(response.data.orderId)
     // 打开审核对话框
     openApproveDialog.value = true
     titleApprove.value = "审核投诉"

@@ -12,10 +12,6 @@
           <ruo-yi-git id="ruoyi-git" class="right-menu-item hover-effect" />
         </el-tooltip>
 
-        <el-tooltip content="文档地址" effect="dark" placement="bottom">
-          <ruo-yi-doc id="ruoyi-doc" class="right-menu-item hover-effect" />
-        </el-tooltip>
-
         <screenfull id="screenfull" class="right-menu-item hover-effect" />
 
         <el-tooltip content="主题模式" effect="dark" placement="bottom">

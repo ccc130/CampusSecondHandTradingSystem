@@ -147,6 +147,8 @@ import { listProducts, getProducts, updateProducts } from "@/api/campus/products
 import { addCarts } from "@/api/campus/carts"
 import { addOrders } from "@/api/campus/orders"
 import { addReviews } from "@/api/campus/reviews"
+import useUserStore from '@/store/modules/user'
+import { checkPermi } from '@/utils/permission'
 
 const { proxy } = getCurrentInstance()
 
@@ -190,7 +192,15 @@ function getList() {
     queryParams.value.params["beginCreatedAt"] = daterangeCreatedAt.value[0]
     queryParams.value.params["endCreatedAt"] = daterangeCreatedAt.value[1]
   }
-  listFavorites(queryParams.value).then(response => {
+  
+  // 始终只获取当前用户的收藏
+  const currentUserId = getCurrentUserId()
+  const queryData = { ...queryParams.value }
+  if (currentUserId) {
+    queryData.userId = currentUserId
+  }
+  
+  listFavorites(queryData).then(response => {
     const favoriteItems = response.rows
     total.value = response.total
     
@@ -351,11 +361,14 @@ function viewProduct(favorite) {
   console.log('查看商品详情', favorite)
 }
 
-// 获取当前用户ID（模拟）
+// 获取当前用户ID
 function getCurrentUserId() {
-  // 这里应该从store或token中获取当前用户ID
-  // 模拟返回一个用户ID
-  return 1
+  return useUserStore().id
+}
+
+// 检查用户是否拥有编辑权限
+function hasEditPermission() {
+  return checkPermi(['campus:favorites:edit'])
 }
 
 // 更新商品状态

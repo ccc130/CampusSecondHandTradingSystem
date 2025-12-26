@@ -42,3 +42,11 @@ export function delProducts(id) {
     method: 'delete'
   })
 }
+
+// 批量删除浏览商品
+export function batchDelProducts(ids) {
+  return request({
+    url: '/campus/products/' + ids,
+    method: 'delete'
+  })
+}

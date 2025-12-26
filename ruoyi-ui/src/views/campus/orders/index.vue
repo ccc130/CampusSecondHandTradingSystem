@@ -44,15 +44,6 @@
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button
-          type="primary"
-          plain
-          icon="Plus"
-          @click="handleAdd"
-          v-hasPermi="['campus:orders:add']"
-        >新增</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
           type="success"
           plain
           icon="Edit"
@@ -86,9 +77,21 @@
     <el-table v-loading="loading" :data="ordersList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="订单ID" align="center" prop="id" />
-      <el-table-column label="买家ID" align="center" prop="buyerId" />
-      <el-table-column label="卖家ID" align="center" prop="sellerId" />
-      <el-table-column label="商品ID" align="center" prop="productId" />
+      <el-table-column label="买家" align="center" prop="buyerId">
+        <template #default="scope">
+          {{ getUserName(scope.row.buyerId) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="卖家" align="center" prop="sellerId">
+        <template #default="scope">
+          {{ getUserName(scope.row.sellerId) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="商品" align="center" prop="productId">
+        <template #default="scope">
+          {{ getProductName(scope.row.productId) }}
+        </template>
+      </el-table-column>
 
       <el-table-column label="总价" align="center" prop="totalPrice" />
       <el-table-column label="订单状态" align="center" prop="status">
@@ -126,13 +129,13 @@
     <el-dialog :title="title" v-model="open" width="500px" append-to-body>
       <el-form ref="ordersRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="买家ID" prop="buyerId">
-          <el-input v-model="form.buyerId" placeholder="请输入买家ID" />
+          <el-input v-model="form.buyerId" placeholder="请输入买家ID" readonly />
         </el-form-item>
         <el-form-item label="卖家ID" prop="sellerId">
-          <el-input v-model="form.sellerId" placeholder="请输入卖家ID" />
+          <el-input v-model="form.sellerId" placeholder="请输入卖家ID" readonly />
         </el-form-item>
         <el-form-item label="商品ID" prop="productId">
-          <el-input v-model="form.productId" placeholder="请输入商品ID" />
+          <el-input v-model="form.productId" placeholder="请输入商品ID" readonly />
         </el-form-item>
 
         <el-form-item label="总价" prop="totalPrice">
@@ -177,6 +180,10 @@
 
 <script setup name="Orders">
 import { listOrders, getOrders, delOrders, addOrders, updateOrders } from "@/api/campus/orders"
+import { getUser } from "@/api/system/user"
+import { getProducts } from "@/api/campus/products"
+import useUserStore from '@/store/modules/user'
+import { checkPermi } from '@/utils/permission'
 
 const { proxy } = getCurrentInstance()
 const { campus_order_status } = proxy.useDict('campus_order_status')
@@ -190,6 +197,9 @@ const single = ref(true)
 const multiple = ref(true)
 const total = ref(0)
 const title = ref("")
+// 用于存储映射关系的数据
+const userMap = ref({})
+const productMap = ref({})
 
 const data = reactive({
   form: {},
@@ -207,14 +217,88 @@ const data = reactive({
 
 const { queryParams, form, rules } = toRefs(data)
 
+// 获取当前用户ID
+function getCurrentUserId() {
+  return useUserStore().id
+}
+
+// 检查用户是否拥有编辑权限
+function hasEditPermission() {
+  return checkPermi(['campus:orders:edit'])
+}
+
 /** 查询我的订单列表 */
 function getList() {
   loading.value = true
   listOrders(queryParams.value).then(response => {
-    ordersList.value = response.rows
-    total.value = response.total
+    // 检查用户是否拥有编辑权限
+    const hasEditPerm = hasEditPermission()
+    
+    if (!hasEditPerm) {
+      const currentUserId = getCurrentUserId()
+      if (currentUserId) {
+        // 如果没有编辑权限，只显示当前用户相关的订单数据（作为买家或卖家）
+        ordersList.value = response.rows.filter(item => 
+          item.buyerId == currentUserId || item.sellerId == currentUserId
+        )
+        // 更新总数为过滤后的数量
+        total.value = ordersList.value.length
+      } else {
+        ordersList.value = []
+        total.value = 0
+      }
+    } else {
+      // 有编辑权限，显示所有数据
+      ordersList.value = response.rows
+      total.value = response.total
+    }
+    
     loading.value = false
+    
+    // 获取所有相关数据的映射
+    loadRelatedData(ordersList.value)
   })
+}
+
+// 加载相关数据的映射关系
+function loadRelatedData(orders) {
+  // 获取所有唯一的用户ID
+  const userIds = [...new Set(orders.flatMap(item => [item.buyerId, item.sellerId]).filter(id => id))]
+  
+  // 获取所有唯一的商品ID
+  const productIds = [...new Set(orders.map(item => item.productId).filter(id => id))]
+  
+  // 获取用户信息
+  userIds.forEach(userId => {
+    if (!userMap.value[userId]) {
+      getUser(userId).then(response => {
+        userMap.value[userId] = response.data.nickName || response.data.userName || `用户${userId}`
+      }).catch(() => {
+        userMap.value[userId] = `用户${userId}`
+      })
+    }
+  })
+  
+  // 获取商品信息
+  productIds.forEach(productId => {
+    if (!productMap.value[productId]) {
+      getProducts(productId).then(response => {
+        productMap.value[productId] = response.data.title || `商品${productId}`
+      }).catch(() => {
+        productMap.value[productId] = `商品${productId}`
+      })
+    }
+  })
+}
+
+// 根据ID获取用户名称
+function getUserName(userId) {
+  return userMap.value[userId] || `用户${userId}`
+}
+
+// 根据ID获取商品名称
+function getProductName(productId) {
+  return productMap.value[productId] || `商品${productId}`
 }
 
 // 取消按钮
