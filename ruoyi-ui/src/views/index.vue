@@ -174,7 +174,7 @@ async function getStatistics() {
       const allOrdersRes = await listOrders({ pageNum: 1, pageSize: 1000 })
       const allOrders = allOrdersRes.rows || []
       
-      // 统计订单状态
+      // 统计订单状态 - 根据实际后端返回的字段调整
       const statusCount = {
         '待付款': 0,
         '待发货': 0,
@@ -183,12 +183,12 @@ async function getStatistics() {
       }
       
       allOrders.forEach(order => {
-        // 假设订单状态字段为status，实际项目中需要根据后端返回的字段调整
-        if (order.status === '0' || order.status === '待付款') {
+        // 根据实际的订单状态字段进行统计，通常后端返回数字状态码
+        if (order.status === 0 || order.status === '0' || order.status === '待付款') {
           statusCount['待付款']++
-        } else if (order.status === '1' || order.status === '待发货') {
+        } else if (order.status === 1 || order.status === '1' || order.status === '待发货') {
           statusCount['待发货']++
-        } else if (order.status === '2' || order.status === '已完成') {
+        } else if (order.status === 2 || order.status === '2' || order.status === '已完成') {
           statusCount['已完成']++
         } else {
           statusCount['已取消']++
