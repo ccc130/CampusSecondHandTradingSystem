@@ -427,6 +427,7 @@ function confirmPayment() {
   const isFromCartCheckout = cartsList.value.some(cart => cart.checked) // 检查是否有选中的购物车项目
   let orderPromises = []
   let itemsToProcess = []
+  let itemsToDeleteFromCart = [] // 记录需要从购物车删除的商品ID
   
   if (isFromCartCheckout) {
     // 购物车结算流程
@@ -465,6 +466,12 @@ function confirmPayment() {
     }
     
     orderPromises.push(addOrders(orderData))
+    
+    // 检查立即购买的商品是否在购物车中，如果是，则标记为需要删除
+    const cartItemInCarts = cartsList.value.find(cart => cart.productId === selectedProduct.value.id)
+    if (cartItemInCarts) {
+      itemsToDeleteFromCart.push(cartItemInCarts.id)
+    }
   }
   
   // 批量创建订单
@@ -490,20 +497,26 @@ function confirmPayment() {
       return Promise.all(updateProductPromises)
     })
     .then(() => {
+      // 合并需要删除的购物车项目（包括购物车结算选中的项目和立即购买的商品）
+      let allIdsToDelete = []
       if (isFromCartCheckout) {
-        // 清除已支付的商品（从购物车中删除选中的商品）
-        const deletePromises = selectedIds.value.map(id => delCarts(id))
+        allIdsToDelete = [...selectedIds.value]
+      }
+      if (itemsToDeleteFromCart.length > 0) {
+        allIdsToDelete = [...allIdsToDelete, ...itemsToDeleteFromCart]
+      }
+      
+      if (allIdsToDelete.length > 0) {
+        // 清除已支付的商品（从购物车中删除商品）
+        const deletePromises = allIdsToDelete.map(id => delCarts(id))
         return Promise.all(deletePromises)
       } else {
-        // 立即购买不需要删除购物车项目（因为商品原本就不在购物车中选中状态）
-        // 但需要重置selectedProduct
-        selectedProduct.value = null
         return Promise.resolve()
       }
     })
     .then(() => {
-      if (isFromCartCheckout) {
-        proxy.$modal.msgSuccess(`成功清除 ${selectedIds.value.length} 件已支付商品`)
+      if (isFromCartCheckout || itemsToDeleteFromCart.length > 0) {
+        proxy.$modal.msgSuccess(`成功清除 ${isFromCartCheckout ? selectedIds.value.length : itemsToDeleteFromCart.length} 件已支付商品`)
       }
       // 刷新购物车列表
       getList()
@@ -647,6 +660,11 @@ function getSafeImageUrl(imageUrl) {
   
   return 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
 }
+
+// 每次激活（进入）页面时自动刷新
+onActivated(() => {
+  getList()
+})
 
 onMounted(() => {
   getList()

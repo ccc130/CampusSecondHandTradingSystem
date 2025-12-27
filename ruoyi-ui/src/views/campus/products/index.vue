@@ -507,6 +507,7 @@ const showPaymentConfirmation = ref(false) // 新增：支付确认对话框
 const complaintDialogVisible = ref(false)
 const paymentQrCode = ref(payImage)   // 支付二维码图片路径
 const selectedProduct = ref(null)
+const selectedTotalPrice = ref(0)  // 添加缺失的响应式变量
 const buyForm = reactive({
   quantity: 1
 })
@@ -651,8 +652,6 @@ function getCurrentUserId() {
 // 获取商品评论
 function getProductReviews(productId) {
   // 获取所有评论，然后筛选与当前商品相关的评论
-  // 这里需要先获取与该商品相关的订单，然后获取对这些订单的评论
-  // 由于当前API可能不直接支持按商品ID获取评论，我们先获取相关订单
   const orderParams = {
     pageNum: 1,
     pageSize: 9999, // 获取所有相关订单

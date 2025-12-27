@@ -43,19 +43,6 @@
               </div>
             </el-card>
           </el-col>
-          <el-col :span="6">
-            <el-card class="statistic-card">
-              <div class="statistic-item">
-                <div class="statistic-icon bg-info">
-                  <el-icon><User /></el-icon>
-                </div>
-                <div class="statistic-content">
-                  <p class="statistic-title">用户总数</p>
-                  <p class="statistic-number">{{ userCount }}</p>
-                </div>
-              </div>
-            </el-card>
-          </el-col>
         </el-row>
       </el-col>
     </el-row>
@@ -104,7 +91,6 @@ import { listProducts } from '@/api/campus/products'
 import { listOrders } from '@/api/campus/orders'
 import { listFavorites } from '@/api/campus/favorites'
 import { listCategories } from '@/api/campus/categories'
-import { listUser } from '@/api/system/user'
 
 // 统计数据
 const productCount = ref(0)
@@ -125,12 +111,11 @@ async function getStatistics() {
     proxy.$modal.loading("正在加载统计数据，请稍候！")
     
     // 并行获取所有统计数据
-    const [productRes, orderRes, favoriteRes, categoryRes, userRes] = await Promise.allSettled([
+    const [productRes, orderRes, favoriteRes, categoryRes] = await Promise.allSettled([
       listProducts({ pageNum: 1, pageSize: 1 }),
       listOrders({ pageNum: 1, pageSize: 1 }),
       listFavorites({ pageNum: 1, pageSize: 1 }),
-      listCategories({ pageNum: 1, pageSize: 100 }),
-      listUser({ pageNum: 1, pageSize: 1 })
+      listCategories({ pageNum: 1, pageSize: 100 })
     ])
     
     // 处理商品总数
@@ -152,14 +137,6 @@ async function getStatistics() {
       favoriteCount.value = favoriteRes.value.total || 0
     } else {
       console.error('获取收藏总数失败:', favoriteRes.reason)
-    }
-    
-    // 处理用户总数
-    if (userRes.status === 'fulfilled') {
-      userCount.value = userRes.value.total || 0
-    } else {
-      console.error('获取用户总数失败:', userRes.reason)
-      userCount.value = 0
     }
     
     // 处理分类数据
