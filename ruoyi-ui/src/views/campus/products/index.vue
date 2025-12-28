@@ -4,12 +4,24 @@
     <div class="filter-container">
       <el-row :gutter="10" class="mb8">
         <el-col :span="6">
-          <el-input
+          <el-select
             v-model="queryParams.title"
-            placeholder="商品名称"
+            filterable
+            remote
+            reserve-keyword
+            placeholder="请输入商品ID或名称"
+            :remote-method="remoteMethod"
+            :loading="searchLoading"
             clearable
-            @keyup.enter="handleQuery"
-          />
+            @change="handleQuery"
+          >
+            <el-option
+              v-for="item in searchOptions"
+              :key="item.id"
+              :label="item.title"
+              :value="item.title"
+            />
+          </el-select>
         </el-col>
         <el-col :span="4">
           <el-select
@@ -169,7 +181,7 @@
               size="small"
               icon="Edit"
               @click="handleUpdate(product)"
-              v-hasPermi="['campus:products:edit']"
+              v-if="(product.userId === getCurrentUserId() || auth.hasPermi(['system:role:list'])) && auth.hasPermi('campus:products:edit')"
             >
               编辑
             </el-button>
@@ -322,7 +334,7 @@
                 size="large" 
                 icon="Edit"
                 @click="handleUpdate(selectedProduct)"
-                v-if="selectedProduct.userId === getCurrentUserId() || auth.hasPermi('campus:products:edit')"
+                v-if="(selectedProduct.userId === getCurrentUserId() || auth.hasPermi(['system:role:list'])) && auth.hasPermi('campus:products:edit')"
               >
                 编辑商品
               </el-button>
@@ -511,6 +523,9 @@ const selectedTotalPrice = ref(0)  // 添加缺失的响应式变量
 const buyForm = reactive({
   quantity: 1
 })
+// 搜索相关
+const searchLoading = ref(false)
+const searchOptions = ref([])
 // 用于存储映射关系的数据
 const userMap = ref({})
 // 评论相关数据
@@ -787,6 +802,39 @@ function updateViewCount(productId) {
   }).catch(error => {
     console.error("获取商品信息失败", error)
   })
+}
+
+// 远程搜索方法
+function remoteMethod(query) {
+  if (query !== '') {
+    searchLoading.value = true
+    
+    // 根据输入的查询词进行搜索，可以是ID或标题
+    const params = {
+      pageNum: 1,
+      pageSize: 100, // 限制返回结果数量
+    }
+    
+    // 如果输入的是数字，可能是ID或标题
+    if (/^\d+$/.test(query)) {
+      // 同时按ID和标题搜索
+      params.id = parseInt(query)
+      params.title = query
+    } else {
+      // 按标题搜索
+      params.title = query
+    }
+    
+    listProducts(params).then(response => {
+      searchOptions.value = response.rows
+      searchLoading.value = false
+    }).catch(() => {
+      searchOptions.value = []
+      searchLoading.value = false
+    })
+  } else {
+    searchOptions.value = []
+  }
 }
 
 // 搜索
@@ -1131,8 +1179,16 @@ function handleUpdate(product) {
   // 检查当前用户是否为商品发布者或拥有编辑权限
   const currentUserId = getCurrentUserId()
   const hasEditPermission = auth.hasPermi('campus:products:edit')
+  const hasSystemRoleListPermission = auth.hasPermi(['system:role:list'])
   
-  if (product.userId !== currentUserId && !hasEditPermission) {
+  // 如果用户没有 system:role:list 权限，则只能编辑自己发布的商品
+  if (!hasSystemRoleListPermission && product.userId !== currentUserId) {
+    proxy.$modal.msgError("您没有权限编辑此商品，仅能修改自己发布的商品")
+    return
+  }
+  
+  // 如果用户既没有编辑权限也不是商品发布者，则拒绝访问
+  if (!hasEditPermission && product.userId !== currentUserId) {
     proxy.$modal.msgError("您没有权限编辑此商品")
     return
   }

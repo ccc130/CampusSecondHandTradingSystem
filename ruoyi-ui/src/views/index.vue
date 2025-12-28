@@ -17,7 +17,7 @@
               </div>
             </el-card>
           </el-col>
-          <el-col :span="6">
+          <el-col :span="6" v-hasPermi="['system:role:list']">
             <el-card class="statistic-card">
               <div class="statistic-item">
                 <div class="statistic-icon bg-success">
@@ -59,7 +59,7 @@
       </el-col>
       
       <!-- 订单状态统计饼图 -->
-      <el-col :span="12">
+      <el-col :span="12" v-hasPermi="['system:role:list']">
         <el-card class="chart-card">
           <template #header>
             <span>订单状态统计</span>

@@ -113,6 +113,7 @@
         <template #default="scope">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['campus:orders:edit']">修改</el-button>
           <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['campus:orders:remove']">删除</el-button>
+          <el-button link type="success" icon="Star" @click="handleReview(scope.row)" v-if="scope.row.status == 2 && scope.row.buyerId == getCurrentUserId()">评价</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -175,6 +176,27 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 评价商品对话框 -->
+    <el-dialog :title="reviewTitle" v-model="reviewOpen" width="500px" append-to-body>
+      <el-form ref="reviewRef" :model="reviewForm" :rules="reviewRules" label-width="80px">
+        <el-form-item label="商品名称" prop="productId">
+          <el-input v-model="reviewProductName" placeholder="商品名称" readonly />
+        </el-form-item>
+        <el-form-item label="评价等级" prop="rating">
+          <el-rate v-model="reviewForm.rating" :max="5" show-text allow-half />
+        </el-form-item>
+        <el-form-item label="评价内容" prop="comment">
+          <el-input v-model="reviewForm.comment" type="textarea" :rows="4" placeholder="请输入评价内容" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="cancelReview">取 消</el-button>
+          <el-button type="primary" @click="submitReview">确 定</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -182,6 +204,7 @@
 import { listOrders, getOrders, delOrders, addOrders, updateOrders } from "@/api/campus/orders"
 import { getUser } from "@/api/system/user"
 import { getProducts } from "@/api/campus/products"
+import { addReviews } from "@/api/campus/reviews"
 import useUserStore from '@/store/modules/user'
 import { checkPermi } from '@/utils/permission'
 
@@ -197,6 +220,9 @@ const single = ref(true)
 const multiple = ref(true)
 const total = ref(0)
 const title = ref("")
+// 评价相关
+const reviewOpen = ref(false)
+const reviewTitle = ref("")
 // 用于存储映射关系的数据
 const userMap = ref({})
 const productMap = ref({})
@@ -211,11 +237,32 @@ const data = reactive({
     productId: null,
     status: null,
   },
+  reviewForm: {
+    orderId: null,
+    reviewerId: null,
+    reviewedUserId: null,
+    rating: 5,
+    comment: null,
+    createdAt: null
+  },
   rules: {
   }
 })
 
-const { queryParams, form, rules } = toRefs(data)
+const { queryParams, form, reviewForm } = toRefs(data)
+
+const reviewRules = {
+  rating: [
+    { required: true, message: '请选择评价等级', trigger: 'change' }
+  ],
+  comment: [
+    { required: true, message: '请输入评价内容', trigger: 'blur' },
+    { min: 5, max: 200, message: '评价内容长度应在5到200个字符之间', trigger: 'blur' }
+  ]
+}
+
+// 评价商品名称
+const reviewProductName = ref('')
 
 // 获取当前用户ID
 function getCurrentUserId() {
@@ -397,6 +444,68 @@ function handleExport() {
   proxy.download('campus/orders/export', {
     ...queryParams.value
   }, `orders_${new Date().getTime()}.xlsx`)
+}
+
+// 取消评价
+function cancelReview() {
+  reviewOpen.value = false
+  resetReview()
+}
+
+// 评价表单重置
+function resetReview() {
+  reviewForm.value = {
+    orderId: null,
+    reviewerId: null,
+    reviewedUserId: null,
+    rating: 5,
+    comment: null,
+    createdAt: null
+  }
+  reviewProductName.value = ''
+  proxy.resetForm("reviewRef")
+}
+
+/** 评价按钮操作 */
+function handleReview(row) {
+  const currentUserId = getCurrentUserId()
+  
+  // 确保只有订单的买家才能评价
+  if (row.buyerId != currentUserId) {
+    proxy.$modal.msgError("只有订单买家才能进行评价")
+    return
+  }
+  
+  resetReview()
+  // 获取当前用户ID作为评价者ID
+  reviewForm.value.reviewerId = currentUserId
+  // 设置订单ID
+  reviewForm.value.orderId = row.id
+  // 设置被评价用户ID（商品卖家）
+  reviewForm.value.reviewedUserId = row.sellerId
+  // 获取商品名称
+  reviewProductName.value = getProductName(row.productId)
+  
+  reviewOpen.value = true
+  reviewTitle.value = "评价商品"
+}
+
+/** 提交评价 */
+function submitReview() {
+  proxy.$refs["reviewRef"].validate(valid => {
+    if (valid) {
+      // 设置创建时间
+      reviewForm.value.createdAt = new Date().toISOString().split('T')[0]
+      
+      addReviews(reviewForm.value).then(response => {
+        proxy.$modal.msgSuccess("评价成功")
+        reviewOpen.value = false
+        resetReview()
+      }).catch(error => {
+        proxy.$modal.msgError("评价失败：" + error.message)
+      })
+    }
+  })
 }
 
 getList()

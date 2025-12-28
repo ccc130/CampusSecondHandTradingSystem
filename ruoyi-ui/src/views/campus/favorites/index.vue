@@ -9,13 +9,25 @@
           @keyup.enter="handleQuery"
         />
       </el-form-item>
-      <el-form-item label="商品ID" prop="productId">
-        <el-input
+      <el-form-item label="商品" prop="productId">
+        <el-select
           v-model="queryParams.productId"
-          placeholder="请输入商品ID"
+          filterable
+          remote
+          reserve-keyword
+          placeholder="请输入商品ID或名称"
+          :remote-method="remoteMethod"
+          :loading="searchLoading"
           clearable
-          @keyup.enter="handleQuery"
-        />
+          @change="handleQuery"
+        >
+          <el-option
+            v-for="item in searchOptions"
+            :key="item.id"
+            :label="item.title"
+            :value="item.id"
+          />
+        </el-select>
       </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
@@ -98,7 +110,7 @@
           <el-button 
             type="info" 
             size="small" 
-            icon="ChatLineRound"
+            icon="View"
             @click="viewProduct(favorite)"
           >
             查看详情
@@ -138,6 +150,39 @@
         </div>
       </div>
     </div>
+    
+    <!-- 商品详情对话框 -->
+    <el-dialog title="商品详情" v-model="productDetailVisible" width="60%" append-to-body>
+      <div v-if="selectedProduct" class="product-detail">
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <div class="image-container">
+              <img 
+                :src="getSafeImageUrl(selectedProduct.imageUrls)" 
+                :alt="selectedProduct.title" 
+                class="detail-image" 
+                @error="onImageError" 
+                style="cursor: pointer; width: 100%; height: 300px; object-fit: cover; border-radius: 8px;"
+              />
+            </div>
+          </el-col>
+          <el-col :span="12">
+            <h2>{{ selectedProduct.title }}</h2>
+            <div class="detail-price">¥{{ selectedProduct.price }}</div>
+            <div class="detail-meta">
+              <p>成新度: {{ getConditionText(selectedProduct.conditions) }}</p>
+              <p>卖家: {{ getUserName(selectedProduct.userId) }}</p>
+              <p>浏览次数: {{ selectedProduct.viewCount }}</p>
+              <p>发布时间: {{ parseTime(selectedProduct.createdAt, '{y}-{m}-{d}') }}</p>
+            </div>
+          </el-col>
+        </el-row>
+        <div class="detail-description">
+          <h4>商品描述</h4>
+          <p>{{ selectedProduct.description }}</p>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -147,6 +192,7 @@ import { listProducts, getProducts, updateProducts } from "@/api/campus/products
 import { addCarts } from "@/api/campus/carts"
 import { addOrders } from "@/api/campus/orders"
 import { addReviews } from "@/api/campus/reviews"
+import { getUser } from "@/api/system/user"
 import useUserStore from '@/store/modules/user'
 import { checkPermi } from '@/utils/permission'
 
@@ -169,6 +215,19 @@ const selectedIds = ref([])
 const allChecked = ref(false)
 const hasSelected = ref(false)
 const selectedCount = ref(0)
+// 商品详情相关
+const productDetailVisible = ref(false)
+const selectedProduct = ref(null)
+const productReviews = ref([])
+const newReviewContent = ref('')
+const newReviewRating = ref(0)
+// 图片相关
+const currentImageUrlIndex = ref(0)
+// 用于存储用户映射关系
+const userMap = ref({})
+// 搜索相关
+const searchLoading = ref(false)
+const searchOptions = ref([])
 
 const data = reactive({
   form: {},
@@ -357,35 +416,73 @@ function buyNow(favorite) {
 
 // 查看商品详情
 function viewProduct(favorite) {
-  // 这里应该跳转到商品详情页面
-  console.log('查看商品详情', favorite)
+  // 获取商品详细信息并显示详情弹窗
+  getProducts(favorite.productId).then(response => {
+    const product = response.data
+    selectedProduct.value = product
+    productDetailVisible.value = true
+    
+    // 加载商品评论
+    getProductReviews(product.id)
+    
+    // 更新查看次数
+    updateViewCount(product.id)
+  }).catch(error => {
+    proxy.$modal.msgError("获取商品详情失败：" + error.message)
+  })
 }
 
-// 获取当前用户ID
-function getCurrentUserId() {
-  return useUserStore().id
+// 从商品详情对话框加入购物车
+function addToCartFromDetail(product) {
+  const productCopy = { ...product };
+  const cartData = {
+    userId: getCurrentUserId(),
+    productId: productCopy.id,
+    quantity: 1,
+    addedAt: new Date().toISOString().split('T')[0]
+  }
+  
+  addCarts(cartData).then(response => {
+    proxy.$modal.msgSuccess(`已成功将商品《${productCopy.title}》加入购物车`)
+  }).catch(error => {
+    proxy.$modal.msgError("加入购物车失败：" + error.message)
+  })
 }
 
-// 检查用户是否拥有编辑权限
-function hasEditPermission() {
-  return checkPermi(['campus:favorites:edit'])
+// 从商品详情对话框立即购买
+function buyProductFromDetail(product) {
+  // 这里可以跳转到购物车或直接购买流程
+  proxy.$modal.msgInfo("跳转到购买流程")
 }
 
-// 更新商品状态
-function updateProductStatus(productId, status) {
-  // 获取当前商品信息
+// 图片加载错误处理
+function onImageError(event) {
+  if (event && event.target) {
+    event.target.src = 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
+    event.target.onerror = null; // 防止无限循环
+  }
+}
+
+// 更新商品查看次数
+function updateViewCount(productId) {
   getProducts(productId).then(response => {
     const product = response.data
-    product.status = status
-    // 更新商品信息
+    product.viewCount = (product.viewCount || 0) + 1
     updateProducts(product).then(updateResponse => {
-      console.log("商品状态已更新", updateResponse)
+      console.log("商品查看次数已更新", updateResponse)
     }).catch(error => {
-      console.error("更新商品状态失败", error)
+      console.error("更新商品查看次数失败", error)
     })
   }).catch(error => {
     console.error("获取商品信息失败", error)
   })
+}
+
+// 获取商品评论
+function getProductReviews(productId) {
+  // 这里可以实现获取商品评论的逻辑
+  // 为了简化，暂时设置为空数组
+  productReviews.value = []
 }
 
 // 获取新旧程度文本
@@ -400,9 +497,101 @@ function getConditionText(condition) {
   return conditions[condition] || '未知'
 }
 
-// 图片加载错误处理
-function onImageError(event) {
-  event.target.src = '/images/default-product.png' // 默认商品图片
+// 获取用户名称
+function getUserName(userId) {
+  if (userMap.value[userId]) {
+    return userMap.value[userId]
+  }
+  // 获取用户信息
+  getUser(userId).then(response => {
+    userMap.value[userId] = response.data.nickName || response.data.userName || `用户${userId}`
+  }).catch(() => {
+    userMap.value[userId] = `用户${userId}`
+  })
+  return userMap.value[userId] || `用户${userId}`
+}
+
+// 获取当前用户ID
+function getCurrentUserId() {
+  return useUserStore().id
+}
+
+// 获取安全的图片URL
+function getSafeImageUrl(imageUrl) {
+  if (!imageUrl) {
+    return 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg'; // 默认图片
+  }
+  
+  // 如果是数组，取第一张图片
+  if (Array.isArray(imageUrl)) {
+    return imageUrl.length > 0 ? imageUrl[0] : 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
+  }
+  
+  // 如果是字符串但包含多个URL（可能以逗号或其他分隔符分隔），取第一个
+  if (typeof imageUrl === 'string') {
+    // 去除首尾空格
+    imageUrl = imageUrl.trim();
+    if (imageUrl.includes(',')) {
+      // 分割并取第一个非空URL
+      const urls = imageUrl.split(',').map(url => url.trim()).filter(url => url);
+      if (urls.length > 0) {
+        imageUrl = urls[0];
+      } else {
+        return 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
+      }
+    }
+    
+    // 如果是相对路径（以/开头但不以http/https开头），添加基础URL
+    if (imageUrl.startsWith('/') && !imageUrl.startsWith('http')) {
+      // 检查是否已在代理路径中，ruoyi项目通常图片路径以/profile/开头
+      if (imageUrl.startsWith('/profile/')) {
+        // 检查是否已经在/dev-api或/prod-api下，避免重复添加
+        if (!imageUrl.startsWith('/dev-api') && !imageUrl.startsWith('/prod-api')) {
+          // 根据环境变量确定基础API路径
+          const basePath = import.meta.env.VITE_APP_BASE_API || '/dev-api';
+          return `${basePath}${imageUrl}`;
+        }
+      }
+      return imageUrl; // 其他相对路径直接返回
+    }
+    
+    return imageUrl;
+  }
+  
+  return 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
+}
+
+// 远程搜索方法
+function remoteMethod(query) {
+  if (query !== '') {
+    searchLoading.value = true
+    
+    // 根据输入的查询词进行搜索，可以是ID或标题
+    const params = {
+      pageNum: 1,
+      pageSize: 100, // 限制返回结果数量
+    }
+    
+    // 如果输入的是数字，可能是ID或标题
+    if (/^\d+$/.test(query)) {
+      // 同时按ID和标题搜索
+      params.id = parseInt(query)
+      params.title = query
+    } else {
+      // 按标题搜索
+      params.title = query
+    }
+    
+    listProducts(params).then(response => {
+      searchOptions.value = response.rows
+      searchLoading.value = false
+    }).catch(() => {
+      searchOptions.value = []
+      searchLoading.value = false
+    })
+  } else {
+    searchOptions.value = []
+  }
 }
 
 // 搜索
@@ -644,6 +833,55 @@ getList()
   justify-content: center;
   padding: 60px 0;
   text-align: center;
+}
+
+.product-detail {
+  .detail-image {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+  
+  .detail-price {
+    font-size: 24px;
+    color: #f56c6c;
+    font-weight: bold;
+    margin: 10px 0;
+  }
+  
+  .detail-meta {
+    margin: 15px 0;
+    
+    p {
+      margin: 5px 0;
+      color: #606266;
+    }
+  }
+  
+  .detail-actions {
+    margin-top: 20px;
+    
+    .el-button {
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+  }
+  
+  .detail-description {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #dcdfe6;
+    
+    h4 {
+      margin-bottom: 10px;
+    }
+    
+    p {
+      line-height: 1.6;
+      color: #606266;
+    }
+  }
 }
 
 // 响应式设计
