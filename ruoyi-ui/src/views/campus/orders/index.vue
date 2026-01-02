@@ -207,6 +207,7 @@ import { getProducts } from "@/api/campus/products"
 import { addReviews } from "@/api/campus/reviews"
 import useUserStore from '@/store/modules/user'
 import { checkPermi } from '@/utils/permission'
+import { ElMessage } from 'element-plus'
 
 const { proxy } = getCurrentInstance()
 const { campus_order_status } = proxy.useDict('campus_order_status')
@@ -277,34 +278,93 @@ function hasEditPermission() {
 /** 查询我的订单列表 */
 function getList() {
   loading.value = true
-  listOrders(queryParams.value).then(response => {
-    // 检查用户是否拥有编辑权限
-    const hasEditPerm = hasEditPermission()
-    
-    if (!hasEditPerm) {
-      const currentUserId = getCurrentUserId()
-      if (currentUserId) {
-        // 如果没有编辑权限，只显示当前用户相关的订单数据（作为买家或卖家）
-        ordersList.value = response.rows.filter(item => 
-          item.buyerId == currentUserId || item.sellerId == currentUserId
-        )
-        // 更新总数为过滤后的数量
-        total.value = ordersList.value.length
+  
+  // 检查用户是否拥有编辑权限
+  const hasEditPerm = hasEditPermission()
+  
+  // 设置请求参数
+  const requestParams = { ...queryParams.value }
+  
+  // 如果没有编辑权限，需要根据当前用户身份调整查询参数
+  if (!hasEditPerm) {
+    const currentUserId = getCurrentUserId()
+    if (currentUserId) {
+      // 没有编辑权限的用户只能查看自己相关的订单
+      // 如果没有指定买家或卖家ID，查询当前用户作为买家和卖家的所有订单
+      if (!requestParams.buyerId && !requestParams.sellerId) {
+        // 发送两个请求：一个获取当前用户作为买家的订单，一个获取作为卖家的订单
+        const buyerParams = { ...requestParams, buyerId: currentUserId }
+        const sellerParams = { ...requestParams, sellerId: currentUserId }
+        
+        // 并行执行两个请求
+        Promise.all([
+          listOrders(buyerParams),
+          listOrders(sellerParams)
+        ]).then(responses => {
+          // 合并结果并去重
+          const allOrders = [...responses[0].rows, ...responses[1].rows]
+          // 去重，以防某些订单同时匹配买家和卖家条件（理论上不应该发生）
+          const uniqueOrders = allOrders.filter((order, index, self) => 
+            index === self.findIndex(o => o.id === order.id)
+          )
+          
+          ordersList.value = uniqueOrders
+          total.value = uniqueOrders.length
+          
+          loading.value = false
+          
+          // 获取所有相关数据的映射
+          loadRelatedData(ordersList.value)
+        }).catch(error => {
+          console.error('获取订单列表失败:', error)
+          loading.value = false
+          ordersList.value = []
+          total.value = 0
+        })
       } else {
-        ordersList.value = []
-        total.value = 0
+        // 如果已经指定了买家或卖家ID，按原逻辑处理
+        listOrders(requestParams).then(response => {
+          // 过滤出当前用户相关的订单
+          const filteredOrders = response.rows.filter(item => 
+            item.buyerId == currentUserId || item.sellerId == currentUserId
+          )
+          ordersList.value = filteredOrders
+          total.value = filteredOrders.length
+          
+          loading.value = false
+          
+          // 获取所有相关数据的映射
+          loadRelatedData(ordersList.value)
+        }).catch(error => {
+          console.error('获取订单列表失败:', error)
+          loading.value = false
+          ordersList.value = []
+          total.value = 0
+        })
       }
     } else {
-      // 有编辑权限，显示所有数据
+      // 用户未登录且没有编辑权限
+      ordersList.value = []
+      total.value = 0
+      loading.value = false
+    }
+  } else {
+    // 有编辑权限，按原逻辑处理
+    listOrders(requestParams).then(response => {
       ordersList.value = response.rows
       total.value = response.total
-    }
-    
-    loading.value = false
-    
-    // 获取所有相关数据的映射
-    loadRelatedData(ordersList.value)
-  })
+      
+      loading.value = false
+      
+      // 获取所有相关数据的映射
+      loadRelatedData(ordersList.value)
+    }).catch(error => {
+      console.error('获取订单列表失败:', error)
+      loading.value = false
+      ordersList.value = []
+      total.value = 0
+    })
+  }
 }
 
 // 加载相关数据的映射关系
@@ -373,13 +433,48 @@ function reset() {
 /** 搜索按钮操作 */
 function handleQuery() {
   queryParams.value.pageNum = 1
+  
+  // 检查用户是否拥有编辑权限
+  const hasEditPerm = hasEditPermission()
+  if (!hasEditPerm) {
+    // 如果没有编辑权限，确保搜索条件符合当前用户权限
+    const currentUserId = getCurrentUserId()
+    if (currentUserId) {
+      // 如果用户尝试搜索特定的买家或卖家ID，但不是当前用户，则不允许
+      if (queryParams.value.buyerId && queryParams.value.buyerId != currentUserId) {
+        ElMessage.warning('您只能搜索自己的订单')
+        queryParams.value.buyerId = currentUserId
+      }
+      if (queryParams.value.sellerId && queryParams.value.sellerId != currentUserId) {
+        ElMessage.warning('您只能搜索自己的订单')
+        queryParams.value.sellerId = currentUserId
+      }
+    } else {
+      ElMessage.warning('请先登录')
+      return
+    }
+  }
+  
   getList()
 }
 
 /** 重置按钮操作 */
 function resetQuery() {
   proxy.resetForm("queryRef")
-  handleQuery()
+  
+  // 检查用户是否拥有编辑权限
+  const hasEditPerm = hasEditPermission()
+  if (!hasEditPerm) {
+    // 如果没有编辑权限，重置后仍需确保只显示当前用户相关数据
+    const currentUserId = getCurrentUserId()
+    if (!currentUserId) {
+      ordersList.value = []
+      total.value = 0
+    }
+  }
+  
+  queryParams.value.pageNum = 1
+  getList()
 }
 
 // 多选框选中数据
@@ -398,6 +493,16 @@ function handleAdd() {
 
 /** 修改按钮操作 */
 function handleUpdate(row) {
+  // 检查用户是否拥有编辑权限
+  if (!hasEditPermission()) {
+    // 如果没有编辑权限，检查用户是否是订单的买家或卖家
+    const currentUserId = getCurrentUserId()
+    if (row.buyerId != currentUserId && row.sellerId != currentUserId) {
+      proxy.$modal.msgError("您没有权限修改此订单")
+      return
+    }
+  }
+  
   reset()
   const _id = row.id || ids.value
   getOrders(_id).then(response => {
@@ -430,6 +535,16 @@ function submitForm() {
 
 /** 删除按钮操作 */
 function handleDelete(row) {
+  // 检查用户是否拥有删除权限
+  if (!checkPermi(['campus:orders:remove'])) {
+    // 如果没有删除权限，检查用户是否是订单的买家或卖家
+    const currentUserId = getCurrentUserId()
+    if (row.buyerId != currentUserId && row.sellerId != currentUserId) {
+      proxy.$modal.msgError("您没有权限删除此订单")
+      return
+    }
+  }
+  
   const _ids = row.id || ids.value
   proxy.$modal.confirm('是否确认删除我的订单编号为"' + _ids + '"的数据项？').then(function() {
     return delOrders(_ids)
@@ -470,9 +585,17 @@ function resetReview() {
 function handleReview(row) {
   const currentUserId = getCurrentUserId()
   
-  // 确保只有订单的买家才能评价
-  if (row.buyerId != currentUserId) {
-    proxy.$modal.msgError("只有订单买家才能进行评价")
+  // 检查用户是否具有编辑权限，如果没有，则需要确保用户是订单买家
+  if (!hasEditPermission()) {
+    if (row.buyerId != currentUserId) {
+      proxy.$modal.msgError("只有订单买家才能进行评价")
+      return
+    }
+  }
+  
+  // 如果有编辑权限，还需要检查订单状态是否允许评价
+  if (row.status != 2) {  // 假设状态2表示已完成的订单
+    proxy.$modal.msgError("只有已完成的订单才能进行评价")
     return
   }
   
