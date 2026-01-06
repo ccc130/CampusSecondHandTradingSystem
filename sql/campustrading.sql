@@ -11,7 +11,7 @@
  Target Server Version : 80200
  File Encoding         : 65001
 
- Date: 02/01/2026 22:42:05
+ Date: 06/01/2026 19:40:31
 */
 
 SET NAMES utf8mb4;
@@ -28,13 +28,7 @@ CREATE TABLE `campus_carts`  (
   `quantity` int(0) DEFAULT NULL COMMENT '数量',
   `added_at` datetime(0) DEFAULT NULL COMMENT '加入时间',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 24 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Records of campus_carts
--- ----------------------------
-INSERT INTO `campus_carts` VALUES (19, 1, 3, 1, '2025-12-26 00:00:00');
-INSERT INTO `campus_carts` VALUES (20, 1, 2, 1, '2025-12-26 00:00:00');
+) ENGINE = InnoDB AUTO_INCREMENT = 23 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for campus_categories
@@ -154,10 +148,12 @@ CREATE TABLE `campus_products`  (
 -- ----------------------------
 -- Records of campus_products
 -- ----------------------------
-INSERT INTO `campus_products` VALUES (1, 1, 1, '1', '1', 1.00, 1, 0, NULL, 1, NULL, '2025-12-28 10:47:08');
-INSERT INTO `campus_products` VALUES (2, 1, 1, '123', '123', 123.00, 1, 0, '/profile/upload/2025/12/26/20251224231107_20251226084921A002.jpg,/profile/upload/2025/12/26/20251224231107_20251226084935A003.jpg', 16, NULL, '2025-12-28 10:47:09');
-INSERT INTO `campus_products` VALUES (3, 1, 1, '09876', '68', 8678.00, 1, 0, '/profile/upload/2025/12/26/屏幕截图 2025-11-01 002244_20251226141526A001.png', NULL, NULL, '2025-12-28 10:47:12');
-INSERT INTO `campus_products` VALUES (4, 101, 1, '1212', '122', 1212.00, 1, 0, NULL, NULL, NULL, '2026-01-02 21:59:50');
+INSERT INTO `campus_products` VALUES (1, 1, 1, '1', '1', 1.00, 1, 0, NULL, 5, NULL, '2025-12-28 10:47:08');
+INSERT INTO `campus_products` VALUES (2, 1, 1, '123', '123', 123.00, 1, 0, '/profile/upload/2025/12/26/20251224231107_20251226084921A002.jpg,/profile/upload/2025/12/26/20251224231107_20251226084935A003.jpg', 18, NULL, '2025-12-28 10:47:09');
+INSERT INTO `campus_products` VALUES (3, 1, 1, '09876', '68', 8678.00, 1, 0, '/profile/upload/2025/12/26/屏幕截图 2025-11-01 002244_20251226141526A001.png', 1, NULL, '2025-12-28 10:47:12');
+INSERT INTO `campus_products` VALUES (4, 101, 1, '1212', '122', 1212.00, 1, 0, NULL, 1, NULL, '2026-01-02 21:59:50');
+INSERT INTO `campus_products` VALUES (5, 1, 1, '132', '123', 123.00, 2, 1, NULL, NULL, NULL, NULL);
+INSERT INTO `campus_products` VALUES (6, 1, 1, '123132', '132', 1232.00, 2, 1, NULL, NULL, '2026-01-06 00:00:00', NULL);
 
 -- ----------------------------
 -- Table structure for campus_reviews
@@ -172,12 +168,12 @@ CREATE TABLE `campus_reviews`  (
   `comment` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '评论内容',
   `created_at` datetime(0) DEFAULT NULL COMMENT '评价时间',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of campus_reviews
 -- ----------------------------
-INSERT INTO `campus_reviews` VALUES (1, 1, 1, 1, 5, '陶然亭', '2025-12-25 00:00:00');
+INSERT INTO `campus_reviews` VALUES (1, 1, 2, 1, 5, '陶然亭', '2025-12-25 00:00:00');
 INSERT INTO `campus_reviews` VALUES (2, 1, 1, 1, 4, '121212', '2025-12-28 00:00:00');
 
 -- ----------------------------
@@ -413,7 +409,7 @@ CREATE TABLE `sys_logininfor`  (
   PRIMARY KEY (`info_id`) USING BTREE,
   INDEX `idx_sys_logininfor_s`(`status`) USING BTREE,
   INDEX `idx_sys_logininfor_lt`(`login_time`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 214 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统访问记录' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 219 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统访问记录' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of sys_logininfor
@@ -534,6 +530,13 @@ INSERT INTO `sys_logininfor` VALUES (212, 'admin', '127.0.0.1', '内网IP', 'Chr
 INSERT INTO `sys_logininfor` VALUES (213, '12', '127.0.0.1', '内网IP', 'Chrome 14', 'Windows 10', '0', '登录成功', '2026-01-02 21:59:35');
 INSERT INTO `sys_logininfor` VALUES (214, '12', '127.0.0.1', '内网IP', 'Chrome 14', 'Windows 10', '0', '退出成功', '2026-01-02 22:38:17');
 INSERT INTO `sys_logininfor` VALUES (215, 'admin', '127.0.0.1', '内网IP', 'Chrome 14', 'Windows 10', '0', '登录成功', '2026-01-02 22:38:21');
+INSERT INTO `sys_logininfor` VALUES (216, 'admin', '127.0.0.1', '内网IP', 'Chrome 14', 'Windows 10', '0', '登录成功', '2026-01-06 16:35:19');
+INSERT INTO `sys_logininfor` VALUES (217, 'admin', '127.0.0.1', '内网IP', 'Chrome 14', 'Windows 10', '1', '验证码错误', '2026-01-06 18:43:43');
+INSERT INTO `sys_logininfor` VALUES (218, 'admin', '127.0.0.1', '内网IP', 'Chrome 14', 'Windows 10', '0', '登录成功', '2026-01-06 18:43:46');
+INSERT INTO `sys_logininfor` VALUES (219, 'admin', '127.0.0.1', '内网IP', 'Chrome 14', 'Windows 10', '0', '退出成功', '2026-01-06 19:26:04');
+INSERT INTO `sys_logininfor` VALUES (220, '12345', '127.0.0.1', '内网IP', 'Chrome 14', 'Windows 10', '0', '登录成功', '2026-01-06 19:26:10');
+INSERT INTO `sys_logininfor` VALUES (221, '12345', '127.0.0.1', '内网IP', 'Chrome 14', 'Windows 10', '0', '退出成功', '2026-01-06 19:27:14');
+INSERT INTO `sys_logininfor` VALUES (222, 'admin', '127.0.0.1', '内网IP', 'Chrome 14', 'Windows 10', '0', '登录成功', '2026-01-06 19:27:18');
 
 -- ----------------------------
 -- Table structure for sys_menu
@@ -607,7 +610,7 @@ INSERT INTO `sys_menu` VALUES (2009, '商品类别新增', 2007, 2, '#', '', NUL
 INSERT INTO `sys_menu` VALUES (2010, '商品类别修改', 2007, 3, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:categories:edit', '#', 'admin', '2025-12-24 19:30:21', '', NULL, '');
 INSERT INTO `sys_menu` VALUES (2011, '商品类别删除', 2007, 4, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:categories:remove', '#', 'admin', '2025-12-24 19:30:21', '', NULL, '');
 INSERT INTO `sys_menu` VALUES (2012, '商品类别导出', 2007, 5, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:categories:export', '#', 'admin', '2025-12-24 19:30:21', '', NULL, '');
-INSERT INTO `sys_menu` VALUES (2043, '商品评价', 0, 1, 'reviews', 'campus/reviews/index', NULL, '', 1, 0, 'C', '1', '0', 'campus:reviews:list', 'tree', 'admin', '2025-12-24 19:30:38', 'admin', '2025-12-26 16:54:56', '商品评价菜单');
+INSERT INTO `sys_menu` VALUES (2043, '商品评价', 0, 1, 'reviews', 'campus/reviews/index', NULL, '', 1, 0, 'C', '1', '0', 'campus:reviews:list', 'tree', 'admin', '2025-12-24 19:30:38', 'admin', '2026-01-06 18:44:14', '商品评价菜单');
 INSERT INTO `sys_menu` VALUES (2044, '商品评价查询', 2043, 1, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:reviews:query', '#', 'admin', '2025-12-24 19:30:38', '', NULL, '');
 INSERT INTO `sys_menu` VALUES (2045, '商品评价新增', 2043, 2, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:reviews:add', '#', 'admin', '2025-12-24 19:30:38', '', NULL, '');
 INSERT INTO `sys_menu` VALUES (2046, '商品评价修改', 2043, 3, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:reviews:edit', '#', 'admin', '2025-12-24 19:30:38', '', NULL, '');
@@ -619,7 +622,7 @@ INSERT INTO `sys_menu` VALUES (2051, '购物车新增', 2049, 2, '#', '', NULL, 
 INSERT INTO `sys_menu` VALUES (2052, '购物车修改', 2049, 3, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:carts:edit', '#', 'admin', '2025-12-24 19:44:02', '', NULL, '');
 INSERT INTO `sys_menu` VALUES (2053, '购物车删除', 2049, 4, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:carts:remove', '#', 'admin', '2025-12-24 19:44:02', '', NULL, '');
 INSERT INTO `sys_menu` VALUES (2054, '购物车导出', 2049, 5, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:carts:export', '#', 'admin', '2025-12-24 19:44:02', '', NULL, '');
-INSERT INTO `sys_menu` VALUES (2055, '投诉商品', 0, 1, 'complaints', 'campus/complaints/index', NULL, '', 1, 0, 'C', '0', '0', 'campus:complaints:list', 'tab', 'admin', '2025-12-24 19:44:07', 'admin', '2025-12-26 16:54:51', '投诉商品菜单');
+INSERT INTO `sys_menu` VALUES (2055, '投诉处理', 0, 1, 'complaints', 'campus/complaints/index', NULL, '', 1, 0, 'C', '0', '0', 'campus:complaints:list', 'tab', 'admin', '2025-12-24 19:44:07', 'admin', '2026-01-06 19:23:18', '投诉商品菜单');
 INSERT INTO `sys_menu` VALUES (2056, '投诉商品查询', 2055, 1, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:complaints:query', '#', 'admin', '2025-12-24 19:44:07', '', NULL, '');
 INSERT INTO `sys_menu` VALUES (2057, '投诉商品新增', 2055, 2, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:complaints:add', '#', 'admin', '2025-12-24 19:44:07', '', NULL, '');
 INSERT INTO `sys_menu` VALUES (2058, '投诉商品修改', 2055, 3, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:complaints:edit', '#', 'admin', '2025-12-24 19:44:07', '', NULL, '');
@@ -631,7 +634,7 @@ INSERT INTO `sys_menu` VALUES (2063, '我的收藏新增', 2061, 2, '#', '', NUL
 INSERT INTO `sys_menu` VALUES (2064, '我的收藏修改', 2061, 3, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:favorites:edit', '#', 'admin', '2025-12-24 19:44:10', '', NULL, '');
 INSERT INTO `sys_menu` VALUES (2065, '我的收藏删除', 2061, 4, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:favorites:remove', '#', 'admin', '2025-12-24 19:44:10', '', NULL, '');
 INSERT INTO `sys_menu` VALUES (2066, '我的收藏导出', 2061, 5, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:favorites:export', '#', 'admin', '2025-12-24 19:44:10', '', NULL, '');
-INSERT INTO `sys_menu` VALUES (2067, '我的订单', 0, 1, 'orders', 'campus/orders/index', NULL, '', 1, 0, 'C', '0', '0', 'campus:orders:list', 'redis', 'admin', '2025-12-24 19:44:13', 'admin', '2025-12-26 16:54:20', '我的订单菜单');
+INSERT INTO `sys_menu` VALUES (2067, '交易管理', 0, 1, 'orders', 'campus/orders/index', NULL, '', 1, 0, 'C', '0', '0', 'campus:orders:list', 'redis', 'admin', '2025-12-24 19:44:13', 'admin', '2026-01-06 19:23:48', '我的订单菜单');
 INSERT INTO `sys_menu` VALUES (2068, '我的订单查询', 2067, 1, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:orders:query', '#', 'admin', '2025-12-24 19:44:13', '', NULL, '');
 INSERT INTO `sys_menu` VALUES (2069, '我的订单新增', 2067, 2, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:orders:add', '#', 'admin', '2025-12-24 19:44:13', '', NULL, '');
 INSERT INTO `sys_menu` VALUES (2070, '我的订单修改', 2067, 3, '#', '', NULL, '', 1, 0, 'F', '0', '0', 'campus:orders:edit', '#', 'admin', '2025-12-24 19:44:13', '', NULL, '');
@@ -694,7 +697,7 @@ CREATE TABLE `sys_oper_log`  (
   INDEX `idx_sys_oper_log_bt`(`business_type`) USING BTREE,
   INDEX `idx_sys_oper_log_s`(`status`) USING BTREE,
   INDEX `idx_sys_oper_log_ot`(`oper_time`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 347 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '操作日志记录' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 356 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '操作日志记录' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of sys_oper_log
@@ -947,6 +950,23 @@ INSERT INTO `sys_oper_log` VALUES (344, '浏览商品', 1, 'com.ruoyi.system.con
 INSERT INTO `sys_oper_log` VALUES (345, '我的订单', 1, 'com.ruoyi.system.controller.CampusOrdersController.add()', 'POST', 1, '12', NULL, '/campus/orders', '127.0.0.1', '内网IP', '{\"buyerId\":101,\"createdAt\":\"2026-01-02\",\"params\":{},\"productId\":4,\"quantity\":1,\"sellerId\":101,\"status\":2,\"totalPrice\":1212}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-02 21:59:50', 16);
 INSERT INTO `sys_oper_log` VALUES (346, '浏览商品', 2, 'com.ruoyi.system.controller.CampusProductsController.edit()', 'PUT', 1, '12', NULL, '/campus/products', '127.0.0.1', '内网IP', '{\"categoryId\":1,\"conditions\":1,\"description\":\"122\",\"id\":4,\"params\":{},\"price\":1212,\"status\":0,\"title\":\"1212\",\"userId\":101}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-02 21:59:50', 13);
 INSERT INTO `sys_oper_log` VALUES (347, '菜单管理', 2, 'com.ruoyi.web.controller.system.SysMenuController.edit()', 'PUT', 1, 'admin', '研发部门', '/system/menu', '127.0.0.1', '内网IP', '{\"children\":[],\"component\":\"campus/products/index\",\"createTime\":\"2025-12-24 19:50:43\",\"icon\":\"server\",\"isCache\":\"0\",\"isFrame\":\"1\",\"menuId\":2085,\"menuName\":\"总览\",\"menuType\":\"C\",\"orderNum\":1,\"params\":{},\"parentId\":0,\"path\":\"products\",\"perms\":\"campus:products:list\",\"routeName\":\"\",\"status\":\"0\",\"updateBy\":\"admin\",\"visible\":\"0\"}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-02 22:41:06', 17);
+INSERT INTO `sys_oper_log` VALUES (348, '浏览商品', 2, 'com.ruoyi.system.controller.CampusProductsController.edit()', 'PUT', 1, 'admin', '研发部门', '/campus/products', '127.0.0.1', '内网IP', '{\"categoryId\":1,\"conditions\":1,\"description\":\"123\",\"id\":2,\"imageUrls\":\"/profile/upload/2025/12/26/20251224231107_20251226084921A002.jpg,/profile/upload/2025/12/26/20251224231107_20251226084935A003.jpg\",\"params\":{},\"price\":123,\"status\":0,\"title\":\"123\",\"updatedAt\":\"2025-12-28 10:47:09\",\"userId\":1,\"viewCount\":17}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 16:41:30', 43);
+INSERT INTO `sys_oper_log` VALUES (349, '菜单管理', 2, 'com.ruoyi.web.controller.system.SysMenuController.edit()', 'PUT', 1, 'admin', '研发部门', '/system/menu', '127.0.0.1', '内网IP', '{\"children\":[],\"component\":\"campus/reviews/index\",\"createTime\":\"2025-12-24 19:30:38\",\"icon\":\"tree\",\"isCache\":\"0\",\"isFrame\":\"1\",\"menuId\":2043,\"menuName\":\"商品评价\",\"menuType\":\"C\",\"orderNum\":1,\"params\":{},\"parentId\":0,\"path\":\"reviews\",\"perms\":\"campus:reviews:list\",\"routeName\":\"\",\"status\":\"0\",\"updateBy\":\"admin\",\"visible\":\"0\"}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 16:42:06', 28);
+INSERT INTO `sys_oper_log` VALUES (350, '菜单管理', 2, 'com.ruoyi.web.controller.system.SysMenuController.edit()', 'PUT', 1, 'admin', '研发部门', '/system/menu', '127.0.0.1', '内网IP', '{\"children\":[],\"component\":\"campus/reviews/index\",\"createTime\":\"2025-12-24 19:30:38\",\"icon\":\"tree\",\"isCache\":\"0\",\"isFrame\":\"1\",\"menuId\":2043,\"menuName\":\"商品评价\",\"menuType\":\"C\",\"orderNum\":1,\"params\":{},\"parentId\":0,\"path\":\"reviews\",\"perms\":\"campus:reviews:list\",\"routeName\":\"\",\"status\":\"0\",\"updateBy\":\"admin\",\"visible\":\"0\"}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 18:43:59', 18);
+INSERT INTO `sys_oper_log` VALUES (351, '菜单管理', 2, 'com.ruoyi.web.controller.system.SysMenuController.edit()', 'PUT', 1, 'admin', '研发部门', '/system/menu', '127.0.0.1', '内网IP', '{\"children\":[],\"component\":\"campus/reviews/index\",\"createTime\":\"2025-12-24 19:30:38\",\"icon\":\"tree\",\"isCache\":\"0\",\"isFrame\":\"1\",\"menuId\":2043,\"menuName\":\"商品评价\",\"menuType\":\"C\",\"orderNum\":1,\"params\":{},\"parentId\":0,\"path\":\"reviews\",\"perms\":\"campus:reviews:list\",\"routeName\":\"\",\"status\":\"0\",\"updateBy\":\"admin\",\"visible\":\"1\"}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 18:44:14', 8);
+INSERT INTO `sys_oper_log` VALUES (352, '浏览商品', 2, 'com.ruoyi.system.controller.CampusProductsController.edit()', 'PUT', 1, 'admin', '研发部门', '/campus/products', '127.0.0.1', '内网IP', '{\"categoryId\":1,\"conditions\":1,\"description\":\"1\",\"id\":1,\"params\":{},\"price\":1,\"status\":0,\"title\":\"1\",\"updatedAt\":\"2025-12-28 10:47:08\",\"userId\":1,\"viewCount\":2}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 18:50:02', 2);
+INSERT INTO `sys_oper_log` VALUES (353, '浏览商品', 2, 'com.ruoyi.system.controller.CampusProductsController.edit()', 'PUT', 1, 'admin', '研发部门', '/campus/products', '127.0.0.1', '内网IP', '{\"categoryId\":1,\"conditions\":1,\"description\":\"123\",\"id\":2,\"imageUrls\":\"/profile/upload/2025/12/26/20251224231107_20251226084921A002.jpg,/profile/upload/2025/12/26/20251224231107_20251226084935A003.jpg\",\"params\":{},\"price\":123,\"status\":0,\"title\":\"123\",\"updatedAt\":\"2025-12-28 10:47:09\",\"userId\":1,\"viewCount\":18}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 18:50:12', 12);
+INSERT INTO `sys_oper_log` VALUES (354, '浏览商品', 2, 'com.ruoyi.system.controller.CampusProductsController.edit()', 'PUT', 1, 'admin', '研发部门', '/campus/products', '127.0.0.1', '内网IP', '{\"categoryId\":1,\"conditions\":1,\"description\":\"68\",\"id\":3,\"imageUrls\":\"/profile/upload/2025/12/26/屏幕截图 2025-11-01 002244_20251226141526A001.png\",\"params\":{},\"price\":8678,\"status\":0,\"title\":\"09876\",\"updatedAt\":\"2025-12-28 10:47:12\",\"userId\":1,\"viewCount\":1}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 18:50:17', 6);
+INSERT INTO `sys_oper_log` VALUES (355, '浏览商品', 2, 'com.ruoyi.system.controller.CampusProductsController.edit()', 'PUT', 1, 'admin', '研发部门', '/campus/products', '127.0.0.1', '内网IP', '{\"categoryId\":1,\"conditions\":1,\"description\":\"122\",\"id\":4,\"params\":{},\"price\":1212,\"status\":0,\"title\":\"1212\",\"updatedAt\":\"2026-01-02 21:59:50\",\"userId\":101,\"viewCount\":1}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 18:50:21', 9);
+INSERT INTO `sys_oper_log` VALUES (356, '浏览商品', 2, 'com.ruoyi.system.controller.CampusProductsController.edit()', 'PUT', 1, 'admin', '研发部门', '/campus/products', '127.0.0.1', '内网IP', '{\"categoryId\":1,\"conditions\":1,\"description\":\"1\",\"id\":1,\"params\":{},\"price\":1,\"status\":0,\"title\":\"1\",\"updatedAt\":\"2025-12-28 10:47:08\",\"userId\":1,\"viewCount\":3}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 18:50:49', 5);
+INSERT INTO `sys_oper_log` VALUES (357, '浏览商品', 2, 'com.ruoyi.system.controller.CampusProductsController.edit()', 'PUT', 1, 'admin', '研发部门', '/campus/products', '127.0.0.1', '内网IP', '{\"categoryId\":1,\"conditions\":1,\"description\":\"1\",\"id\":1,\"params\":{},\"price\":1,\"status\":0,\"title\":\"1\",\"updatedAt\":\"2025-12-28 10:47:08\",\"userId\":1,\"viewCount\":4}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 18:50:54', 10);
+INSERT INTO `sys_oper_log` VALUES (358, '浏览商品', 2, 'com.ruoyi.system.controller.CampusProductsController.edit()', 'PUT', 1, 'admin', '研发部门', '/campus/products', '127.0.0.1', '内网IP', '{\"categoryId\":1,\"conditions\":1,\"description\":\"1\",\"id\":1,\"params\":{},\"price\":1,\"status\":0,\"title\":\"1\",\"updatedAt\":\"2025-12-28 10:47:08\",\"userId\":1,\"viewCount\":5}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 18:51:34', 5);
+INSERT INTO `sys_oper_log` VALUES (359, '浏览商品', 1, 'com.ruoyi.system.controller.CampusProductsController.add()', 'POST', 1, 'admin', '研发部门', '/campus/products', '127.0.0.1', '内网IP', '{\"categoryId\":1,\"conditions\":2,\"description\":\"123\",\"id\":5,\"params\":{},\"price\":123,\"status\":1,\"title\":\"132\",\"userId\":1}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 18:55:41', 4);
+INSERT INTO `sys_oper_log` VALUES (360, '浏览商品', 1, 'com.ruoyi.system.controller.CampusProductsController.add()', 'POST', 1, 'admin', '研发部门', '/campus/products', '127.0.0.1', '内网IP', '{\"categoryId\":1,\"conditions\":2,\"createdAt\":\"2026-01-06 00:00:00\",\"description\":\"132\",\"id\":6,\"params\":{},\"price\":1232,\"status\":1,\"title\":\"123132\",\"userId\":1}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 18:59:17', 5);
+INSERT INTO `sys_oper_log` VALUES (361, '购物车', 3, 'com.ruoyi.system.controller.CampusCartsController.remove()', 'DELETE', 1, 'admin', '研发部门', '/campus/carts/19', '127.0.0.1', '内网IP', '[19]', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 19:00:23', 14);
+INSERT INTO `sys_oper_log` VALUES (362, '购物车', 3, 'com.ruoyi.system.controller.CampusCartsController.remove()', 'DELETE', 1, 'admin', '研发部门', '/campus/carts/20', '127.0.0.1', '内网IP', '[20]', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 19:00:23', 14);
+INSERT INTO `sys_oper_log` VALUES (363, '菜单管理', 2, 'com.ruoyi.web.controller.system.SysMenuController.edit()', 'PUT', 1, 'admin', '研发部门', '/system/menu', '127.0.0.1', '内网IP', '{\"children\":[],\"component\":\"campus/complaints/index\",\"createTime\":\"2025-12-24 19:44:07\",\"icon\":\"tab\",\"isCache\":\"0\",\"isFrame\":\"1\",\"menuId\":2055,\"menuName\":\"投诉处理\",\"menuType\":\"C\",\"orderNum\":1,\"params\":{},\"parentId\":0,\"path\":\"complaints\",\"perms\":\"campus:complaints:list\",\"routeName\":\"\",\"status\":\"0\",\"updateBy\":\"admin\",\"visible\":\"0\"}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 19:23:18', 7);
+INSERT INTO `sys_oper_log` VALUES (364, '菜单管理', 2, 'com.ruoyi.web.controller.system.SysMenuController.edit()', 'PUT', 1, 'admin', '研发部门', '/system/menu', '127.0.0.1', '内网IP', '{\"children\":[],\"component\":\"campus/orders/index\",\"createTime\":\"2025-12-24 19:44:13\",\"icon\":\"redis\",\"isCache\":\"0\",\"isFrame\":\"1\",\"menuId\":2067,\"menuName\":\"交易管理\",\"menuType\":\"C\",\"orderNum\":1,\"params\":{},\"parentId\":0,\"path\":\"orders\",\"perms\":\"campus:orders:list\",\"routeName\":\"\",\"status\":\"0\",\"updateBy\":\"admin\",\"visible\":\"0\"}', '{\"msg\":\"操作成功\",\"code\":200}', 0, NULL, '2026-01-06 19:23:48', 6);
 
 -- ----------------------------
 -- Table structure for sys_post
@@ -1155,9 +1175,9 @@ CREATE TABLE `sys_user`  (
 -- ----------------------------
 -- Records of sys_user
 -- ----------------------------
-INSERT INTO `sys_user` VALUES (1, 103, 'admin', '若依', '00', 'ry@163.com', '15888888888', '1', '', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '127.0.0.1', '2026-01-02 22:38:21', '2025-12-24 18:34:39', 'admin', '2025-12-24 18:34:39', '', '2026-01-02 22:38:21', '管理员');
+INSERT INTO `sys_user` VALUES (1, 103, 'admin', '若依', '00', 'ry@163.com', '15888888888', '1', '', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '127.0.0.1', '2026-01-06 19:27:18', '2025-12-24 18:34:39', 'admin', '2025-12-24 18:34:39', '', '2026-01-06 19:27:18', '管理员');
 INSERT INTO `sys_user` VALUES (2, 105, 'ry', '若依', '00', 'ry@qq.com', '15666666666', '1', '', '$2a$10$mgmW49qRvXU9PtT6lyWztOFSRXhOf.bGYTZ.4nlb0uBEaWja0riBK', '0', '0', '127.0.0.1', '2025-12-28 10:46:28', '2025-12-24 18:34:39', 'admin', '2025-12-24 18:34:39', 'admin', '2025-12-28 10:46:27', '测试员');
-INSERT INTO `sys_user` VALUES (100, NULL, '12345', '12345', '00', '', '', '0', '', '$2a$10$SuGekKGxQyDHzjf6hHbvfezw/AOPCSFtjMGNdlYhQFtbtyu4hf202', '0', '0', '127.0.0.1', '2025-12-28 10:44:35', '2025-12-26 16:20:22', '', '2025-12-26 16:20:22', 'admin', '2025-12-28 10:44:34', NULL);
+INSERT INTO `sys_user` VALUES (100, NULL, '12345', '12345', '00', '', '', '0', '', '$2a$10$SuGekKGxQyDHzjf6hHbvfezw/AOPCSFtjMGNdlYhQFtbtyu4hf202', '0', '0', '127.0.0.1', '2026-01-06 19:26:11', '2025-12-26 16:20:22', '', '2025-12-26 16:20:22', 'admin', '2026-01-06 19:26:10', NULL);
 INSERT INTO `sys_user` VALUES (101, NULL, '12', '12', '00', '', '', '0', '', '$2a$10$79c5SC1RoXMpU3cQjrIn7eZu9ZFT/vBBGo4b2JXFl6gjFyYs8nlRq', '0', '0', '127.0.0.1', '2026-01-02 21:59:36', '2025-12-28 10:47:57', '', '2025-12-28 10:47:57', '', '2026-01-02 21:59:35', NULL);
 
 -- ----------------------------

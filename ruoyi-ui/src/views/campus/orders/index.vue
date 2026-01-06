@@ -1,29 +1,65 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="68px">
-      <el-form-item label="买家ID" prop="buyerId">
-        <el-input
+      <el-form-item label="买家" prop="buyerId">
+        <el-select
           v-model="queryParams.buyerId"
-          placeholder="请输入买家ID"
+          placeholder="请选择买家"
           clearable
-          @keyup.enter="handleQuery"
-        />
+          filterable
+          remote
+          reserve-keyword
+          :remote-method="remoteSearchUser"
+          :loading="userSearchLoading"
+          style="width: 200px"
+        >
+          <el-option
+            v-for="item in userOptions"
+            :key="item.userId"
+            :label="`${item.nickName || item.userName} (${item.userId})`"
+            :value="item.userId"
+          />
+        </el-select>
       </el-form-item>
-      <el-form-item label="卖家ID" prop="sellerId">
-        <el-input
+      <el-form-item label="卖家" prop="sellerId">
+        <el-select
           v-model="queryParams.sellerId"
-          placeholder="请输入卖家ID"
+          placeholder="请选择卖家"
           clearable
-          @keyup.enter="handleQuery"
-        />
+          filterable
+          remote
+          reserve-keyword
+          :remote-method="remoteSearchUser"
+          :loading="userSearchLoading"
+          style="width: 200px"
+        >
+          <el-option
+            v-for="item in userOptions"
+            :key="item.userId"
+            :label="`${item.nickName || item.userName} (${item.userId})`"
+            :value="item.userId"
+          />
+        </el-select>
       </el-form-item>
-      <el-form-item label="商品ID" prop="productId">
-        <el-input
+      <el-form-item label="商品" prop="productId">
+        <el-select
           v-model="queryParams.productId"
-          placeholder="请输入商品ID"
+          placeholder="请选择商品"
           clearable
-          @keyup.enter="handleQuery"
-        />
+          filterable
+          remote
+          reserve-keyword
+          :remote-method="remoteSearchProduct"
+          :loading="productSearchLoading"
+          style="width: 200px"
+        >
+          <el-option
+            v-for="item in productOptions"
+            :key="item.id"
+            :label="`${item.title} (${item.id})`"
+            :value="item.id"
+          />
+        </el-select>
       </el-form-item>
       <el-form-item label="订单状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="请选择订单状态" clearable>
@@ -130,13 +166,64 @@
     <el-dialog :title="title" v-model="open" width="500px" append-to-body>
       <el-form ref="ordersRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="买家ID" prop="buyerId">
-          <el-input v-model="form.buyerId" placeholder="请输入买家ID" readonly />
+          <el-select
+            v-model="form.buyerId"
+            placeholder="请选择买家"
+            clearable
+            filterable
+            remote
+            reserve-keyword
+            :remote-method="remoteSearchUser"
+            :loading="userSearchLoading"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in userOptions"
+              :key="item.userId"
+              :label="`${item.nickName || item.userName} (${item.userId})`"
+              :value="item.userId"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="卖家ID" prop="sellerId">
-          <el-input v-model="form.sellerId" placeholder="请输入卖家ID" readonly />
+          <el-select
+            v-model="form.sellerId"
+            placeholder="请选择卖家"
+            clearable
+            filterable
+            remote
+            reserve-keyword
+            :remote-method="remoteSearchUser"
+            :loading="userSearchLoading"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in userOptions"
+              :key="item.userId"
+              :label="`${item.nickName || item.userName} (${item.userId})`"
+              :value="item.userId"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="商品ID" prop="productId">
-          <el-input v-model="form.productId" placeholder="请输入商品ID" readonly />
+          <el-select
+            v-model="form.productId"
+            placeholder="请选择商品"
+            clearable
+            filterable
+            remote
+            reserve-keyword
+            :remote-method="remoteSearchProduct"
+            :loading="productSearchLoading"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in productOptions"
+              :key="item.id"
+              :label="`${item.title} (${item.id})`"
+              :value="item.id"
+            />
+          </el-select>
         </el-form-item>
 
         <el-form-item label="总价" prop="totalPrice">
@@ -202,8 +289,8 @@
 
 <script setup name="Orders">
 import { listOrders, getOrders, delOrders, addOrders, updateOrders } from "@/api/campus/orders"
-import { getUser } from "@/api/system/user"
-import { getProducts } from "@/api/campus/products"
+import { getUser, listUser } from "@/api/system/user"
+import { getProducts, listProducts } from "@/api/campus/products"
 import { addReviews } from "@/api/campus/reviews"
 import useUserStore from '@/store/modules/user'
 import { checkPermi } from '@/utils/permission'
@@ -227,6 +314,12 @@ const reviewTitle = ref("")
 // 用于存储映射关系的数据
 const userMap = ref({})
 const productMap = ref({})
+
+// 搜索相关的响应式数据
+const userSearchLoading = ref(false)
+const productSearchLoading = ref(false)
+const userOptions = ref([])
+const productOptions = ref([])
 
 const data = reactive({
   form: {},
@@ -273,6 +366,71 @@ function getCurrentUserId() {
 // 检查用户是否拥有编辑权限
 function hasEditPermission() {
   return checkPermi(['campus:orders:edit'])
+}
+
+// 远程搜索用户
+function remoteSearchUser(query) {
+  if (query !== '') {
+    userSearchLoading.value = true
+    // 使用listUser API搜索用户，支持ID或名称搜索
+    listUser({
+      pageNum: 1,
+      pageSize: 20,
+      userName: query // 根据用户名或ID搜索
+    }).then(response => {
+      userOptions.value = response.rows
+      userSearchLoading.value = false
+    }).catch(() => {
+      userOptions.value = []
+      userSearchLoading.value = false
+    })
+  } else {
+    userOptions.value = []
+  }
+}
+
+// 远程搜索商品
+function remoteSearchProduct(query) {
+  if (query !== '') {
+    productSearchLoading.value = true
+    // 使用listProducts API搜索商品，支持ID或标题搜索
+    listProducts({
+      pageNum: 1,
+      pageSize: 20,
+      title: query // 根据商品标题或ID搜索
+    }).then(response => {
+      // 如果用户输入的是数字，可能是在搜索ID，单独处理
+      if (!isNaN(query)) {
+        // 如果输入是数字，也查询ID匹配的项
+        const idQuery = parseInt(query)
+        listProducts({
+          pageNum: 1,
+          pageSize: 20,
+          id: idQuery
+        }).then(idResponse => {
+          // 合并结果，去重
+          const allProducts = [...response.rows, ...idResponse.rows]
+          // 使用Set去重，基于ID
+          const uniqueProducts = Array.from(
+            new Map(allProducts.map(item => [item.id, item])).values()
+          )
+          productOptions.value = uniqueProducts
+          productSearchLoading.value = false
+        }).catch(() => {
+          productOptions.value = response.rows
+          productSearchLoading.value = false
+        })
+      } else {
+        productOptions.value = response.rows
+        productSearchLoading.value = false
+      }
+    }).catch(() => {
+      productOptions.value = []
+      productSearchLoading.value = false
+    })
+  } else {
+    productOptions.value = []
+  }
 }
 
 /** 查询我的订单列表 */
@@ -585,7 +743,7 @@ function resetReview() {
 function handleReview(row) {
   const currentUserId = getCurrentUserId()
   
-  // 检查用户是否具有编辑权限，如果没有，则需要确保用户是订单买家
+  // 检查用户是否具有编辑权限，如果没有，则需要确保用户是订单的买家
   if (!hasEditPermission()) {
     if (row.buyerId != currentUserId) {
       proxy.$modal.msgError("只有订单买家才能进行评价")

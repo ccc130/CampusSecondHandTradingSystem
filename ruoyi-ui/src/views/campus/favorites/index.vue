@@ -1,13 +1,25 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="68px">
-      <el-form-item label="用户ID" prop="userId">
-        <el-input
+      <el-form-item label="用户" prop="userId">
+        <el-select
           v-model="queryParams.userId"
-          placeholder="请输入用户ID"
+          placeholder="请选择用户"
           clearable
-          @keyup.enter="handleQuery"
-        />
+          filterable
+          remote
+          reserve-keyword
+          :remote-method="remoteSearchUser"
+          :loading="userSearchLoading"
+          style="width: 200px"
+        >
+          <el-option
+            v-for="item in userOptions"
+            :key="item.userId"
+            :label="`${item.nickName || item.userName} (${item.userId})`"
+            :value="item.userId"
+          />
+        </el-select>
       </el-form-item>
       <el-form-item label="商品" prop="productId">
         <el-select
@@ -192,7 +204,7 @@ import { listProducts, getProducts, updateProducts } from "@/api/campus/products
 import { addCarts } from "@/api/campus/carts"
 import { addOrders } from "@/api/campus/orders"
 import { addReviews } from "@/api/campus/reviews"
-import { getUser } from "@/api/system/user"
+import { getUser, listUser } from "@/api/system/user"
 import useUserStore from '@/store/modules/user'
 import { checkPermi } from '@/utils/permission'
 
@@ -227,7 +239,9 @@ const currentImageUrlIndex = ref(0)
 const userMap = ref({})
 // 搜索相关
 const searchLoading = ref(false)
+const userSearchLoading = ref(false)
 const searchOptions = ref([])
+const userOptions = ref([])
 
 const data = reactive({
   form: {},
@@ -242,6 +256,27 @@ const data = reactive({
 })
 
 const { queryParams, form, rules } = toRefs(data)
+
+// 远程搜索用户
+function remoteSearchUser(query) {
+  if (query !== '') {
+    userSearchLoading.value = true
+    // 使用listUser API搜索用户，支持ID或名称搜索
+    listUser({
+      pageNum: 1,
+      pageSize: 20,
+      userName: query // 根据用户名或ID搜索
+    }).then(response => {
+      userOptions.value = response.rows
+      userSearchLoading.value = false
+    }).catch(() => {
+      userOptions.value = []
+      userSearchLoading.value = false
+    })
+  } else {
+    userOptions.value = []
+  }
+}
 
 /** 查询我的收藏列表 */
 function getList() {

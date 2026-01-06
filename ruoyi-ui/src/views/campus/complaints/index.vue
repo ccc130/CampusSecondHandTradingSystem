@@ -4,42 +4,90 @@
       <el-row :gutter="20">
         <el-col :span="6">
           <el-form-item label="投诉人" prop="complainantId">
-            <el-input
+            <el-select
               v-model="queryParams.complainantId"
-              placeholder="请输入投诉人ID"
+              placeholder="请选择投诉人"
               clearable
-              @keyup.enter="handleQuery"
-            />
+              filterable
+              remote
+              reserve-keyword
+              :remote-method="remoteSearchUser"
+              :loading="userSearchLoading"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="item in userOptions"
+                :key="item.userId"
+                :label="`${item.nickName || item.userName} (${item.userId})`"
+                :value="item.userId"
+              />
+            </el-select>
           </el-form-item>
         </el-col>
         <el-col :span="6">
           <el-form-item label="被投诉人" prop="accusedId">
-            <el-input
+            <el-select
               v-model="queryParams.accusedId"
-              placeholder="请输入被投诉人ID"
+              placeholder="请选择被投诉人"
               clearable
-              @keyup.enter="handleQuery"
-            />
+              filterable
+              remote
+              reserve-keyword
+              :remote-method="remoteSearchUser"
+              :loading="userSearchLoading"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="item in userOptions"
+                :key="item.userId"
+                :label="`${item.nickName || item.userName} (${item.userId})`"
+                :value="item.userId"
+              />
+            </el-select>
           </el-form-item>
         </el-col>
         <el-col :span="6">
           <el-form-item label="涉及商品" prop="productId">
-            <el-input
+            <el-select
               v-model="queryParams.productId"
-              placeholder="请输入涉及商品ID"
+              placeholder="请选择涉及商品"
               clearable
-              @keyup.enter="handleQuery"
-            />
+              filterable
+              remote
+              reserve-keyword
+              :remote-method="remoteSearchProduct"
+              :loading="productSearchLoading"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="item in productOptions"
+                :key="item.id"
+                :label="`${item.title} (${item.id})`"
+                :value="item.id"
+              />
+            </el-select>
           </el-form-item>
         </el-col>
         <el-col :span="6">
           <el-form-item label="涉及订单" prop="orderId">
-            <el-input
+            <el-select
               v-model="queryParams.orderId"
-              placeholder="请输入涉及订单ID"
+              placeholder="请选择涉及订单"
               clearable
-              @keyup.enter="handleQuery"
-            />
+              filterable
+              remote
+              reserve-keyword
+              :remote-method="remoteSearchOrder"
+              :loading="orderSearchLoading"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="item in orderOptions"
+                :key="item.id"
+                :label="`订单${item.id} (买家: ${getUserName(item.buyerId)}, 商品: ${getProductName(item.productId)})`"
+                :value="item.id"
+              />
+            </el-select>
           </el-form-item>
         </el-col>
         <el-col :span="6">
@@ -66,12 +114,24 @@
         </el-col>
         <el-col :span="6">
           <el-form-item label="处理人" prop="handlerId">
-            <el-input
+            <el-select
               v-model="queryParams.handlerId"
-              placeholder="请输入处理人"
+              placeholder="请选择处理人"
               clearable
-              @keyup.enter="handleQuery"
-            />
+              filterable
+              remote
+              reserve-keyword
+              :remote-method="remoteSearchUser"
+              :loading="userSearchLoading"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="item in userOptions"
+                :key="item.userId"
+                :label="`${item.nickName || item.userName} (${item.userId})`"
+                :value="item.userId"
+              />
+            </el-select>
           </el-form-item>
         </el-col>
         <el-col :span="6">
@@ -187,24 +247,92 @@
         <el-row>
           <el-col :span="12">
             <el-form-item label="投诉人" prop="complainantId">
-              <el-input v-model="form.complainantId" placeholder="请输入投诉人ID" readonly />
+              <el-select
+                v-model="form.complainantId"
+                placeholder="请选择投诉人"
+                clearable
+                filterable
+                remote
+                reserve-keyword
+                :remote-method="remoteSearchUser"
+                :loading="userSearchLoading"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="item in userOptions"
+                  :key="item.userId"
+                  :label="`${item.nickName || item.userName} (${item.userId})`"
+                  :value="item.userId"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="被投诉人" prop="accusedId">
-              <el-input v-model="form.accusedId" placeholder="请输入被投诉人ID" readonly />
+              <el-select
+                v-model="form.accusedId"
+                placeholder="请选择被投诉人"
+                clearable
+                filterable
+                remote
+                reserve-keyword
+                :remote-method="remoteSearchUser"
+                :loading="userSearchLoading"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="item in userOptions"
+                  :key="item.userId"
+                  :label="`${item.nickName || item.userName} (${item.userId})`"
+                  :value="item.userId"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
         <el-row>
           <el-col :span="12">
             <el-form-item label="涉及商品" prop="productId">
-              <el-input v-model="form.productId" placeholder="请输入商品ID" readonly />
+              <el-select
+                v-model="form.productId"
+                placeholder="请选择涉及商品"
+                clearable
+                filterable
+                remote
+                reserve-keyword
+                :remote-method="remoteSearchProduct"
+                :loading="productSearchLoading"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="item in productOptions"
+                  :key="item.id"
+                  :label="`${item.title} (${item.id})`"
+                  :value="item.id"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="涉及订单" prop="orderId">
-              <el-input v-model="form.orderId" placeholder="请输入订单ID" readonly />
+              <el-select
+                v-model="form.orderId"
+                placeholder="请选择涉及订单"
+                clearable
+                filterable
+                remote
+                reserve-keyword
+                :remote-method="remoteSearchOrder"
+                :loading="orderSearchLoading"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="item in orderOptions"
+                  :key="item.id"
+                  :label="`订单${item.id} (买家: ${getUserName(item.buyerId)}, 商品: ${getProductName(item.productId)})`"
+                  :value="item.id"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
@@ -234,7 +362,24 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="处理人" prop="handlerId">
-              <el-input v-model="form.handlerId" placeholder="请输入处理人ID" />
+              <el-select
+                v-model="form.handlerId"
+                placeholder="请选择处理人"
+                clearable
+                filterable
+                remote
+                reserve-keyword
+                :remote-method="remoteSearchUser"
+                :loading="userSearchLoading"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="item in userOptions"
+                  :key="item.userId"
+                  :label="`${item.nickName || item.userName} (${item.userId})`"
+                  :value="item.userId"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
@@ -266,24 +411,96 @@
         <el-row>
           <el-col :span="12">
             <el-form-item label="投诉人" prop="complainantId">
-              <el-input v-model="form.complainantId" placeholder="请输入投诉人ID" readonly />
+              <el-select
+                v-model="form.complainantId"
+                placeholder="请选择投诉人"
+                clearable
+                filterable
+                remote
+                reserve-keyword
+                :remote-method="remoteSearchUser"
+                :loading="userSearchLoading"
+                style="width: 100%"
+                disabled
+              >
+                <el-option
+                  v-for="item in userOptions"
+                  :key="item.userId"
+                  :label="`${item.nickName || item.userName} (${item.userId})`"
+                  :value="item.userId"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="被投诉人" prop="accusedId">
-              <el-input v-model="form.accusedId" placeholder="请输入被投诉人ID" readonly />
+              <el-select
+                v-model="form.accusedId"
+                placeholder="请选择被投诉人"
+                clearable
+                filterable
+                remote
+                reserve-keyword
+                :remote-method="remoteSearchUser"
+                :loading="userSearchLoading"
+                style="width: 100%"
+                disabled
+              >
+                <el-option
+                  v-for="item in userOptions"
+                  :key="item.userId"
+                  :label="`${item.nickName || item.userName} (${item.userId})`"
+                  :value="item.userId"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
         <el-row>
           <el-col :span="12">
             <el-form-item label="涉及商品" prop="productId">
-              <el-input v-model="currentProductName" placeholder="请输入商品ID" readonly />
+              <el-select
+                v-model="form.productId"
+                placeholder="请选择涉及商品"
+                clearable
+                filterable
+                remote
+                reserve-keyword
+                :remote-method="remoteSearchProduct"
+                :loading="productSearchLoading"
+                style="width: 100%"
+                disabled
+              >
+                <el-option
+                  v-for="item in productOptions"
+                  :key="item.id"
+                  :label="`${item.title} (${item.id})`"
+                  :value="item.id"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="涉及订单" prop="orderId">
-              <el-input v-model="currentOrderName" placeholder="请输入订单ID" readonly />
+              <el-select
+                v-model="form.orderId"
+                placeholder="请选择涉及订单"
+                clearable
+                filterable
+                remote
+                reserve-keyword
+                :remote-method="remoteSearchOrder"
+                :loading="orderSearchLoading"
+                style="width: 100%"
+                disabled
+              >
+                <el-option
+                  v-for="item in orderOptions"
+                  :key="item.id"
+                  :label="`订单${item.id} (买家: ${getUserName(item.buyerId)}, 商品: ${getProductName(item.productId)})`"
+                  :value="item.id"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
@@ -363,9 +580,9 @@
 
 <script setup name="Complaints">
 import { listComplaints, getComplaints, delComplaints, addComplaints, updateComplaints } from "@/api/campus/complaints"
-import { getUser } from "@/api/system/user"
-import { getProducts } from "@/api/campus/products"
-import { getOrders } from "@/api/campus/orders"
+import { getUser, listUser } from "@/api/system/user"
+import { getProducts, listProducts } from "@/api/campus/products"
+import { getOrders, listOrders } from "@/api/campus/orders"
 import useUserStore from '@/store/modules/user'
 import { checkPermi } from '@/utils/permission'
 
@@ -391,6 +608,14 @@ const orderMap = ref({})
 // 当前订单名称
 const currentOrderName = ref("")
 const currentProductName = ref("")
+
+// 搜索相关的响应式数据
+const userSearchLoading = ref(false)
+const productSearchLoading = ref(false)
+const orderSearchLoading = ref(false)
+const userOptions = ref([])
+const productOptions = ref([])
+const orderOptions = ref([])
 
 // 审核对话框表单引用
 const complaintsRef = ref(null)
@@ -422,6 +647,93 @@ const data = reactive({
 })
 
 const { queryParams, form, rules } = toRefs(data)
+
+// 远程搜索用户
+function remoteSearchUser(query) {
+  if (query !== '') {
+    userSearchLoading.value = true
+    // 使用listUser API搜索用户，支持ID或名称搜索
+    listUser({
+      pageNum: 1,
+      pageSize: 20,
+      userName: query // 根据用户名或ID搜索
+    }).then(response => {
+      userOptions.value = response.rows
+      userSearchLoading.value = false
+    }).catch(() => {
+      userOptions.value = []
+      userSearchLoading.value = false
+    })
+  } else {
+    userOptions.value = []
+  }
+}
+
+// 远程搜索商品
+function remoteSearchProduct(query) {
+  if (query !== '') {
+    productSearchLoading.value = true
+    // 使用listProducts API搜索商品，支持ID或标题搜索
+    listProducts({
+      pageNum: 1,
+      pageSize: 20,
+      title: query // 根据商品标题或ID搜索
+    }).then(response => {
+      // 如果用户输入的是数字，可能是在搜索ID，单独处理
+      if (!isNaN(query)) {
+        // 如果输入是数字，也查询ID匹配的项
+        const idQuery = parseInt(query)
+        listProducts({
+          pageNum: 1,
+          pageSize: 20,
+          id: idQuery
+        }).then(idResponse => {
+          // 合并结果，去重
+          const allProducts = [...response.rows, ...idResponse.rows]
+          // 使用Set去重，基于ID
+          const uniqueProducts = Array.from(
+            new Map(allProducts.map(item => [item.id, item])).values()
+          )
+          productOptions.value = uniqueProducts
+          productSearchLoading.value = false
+        }).catch(() => {
+          productOptions.value = response.rows
+          productSearchLoading.value = false
+        })
+      } else {
+        productOptions.value = response.rows
+        productSearchLoading.value = false
+      }
+    }).catch(() => {
+      productOptions.value = []
+      productSearchLoading.value = false
+    })
+  } else {
+    productOptions.value = []
+  }
+}
+
+// 远程搜索订单
+function remoteSearchOrder(query) {
+  if (query !== '') {
+    orderSearchLoading.value = true
+    // 使用listOrders API搜索订单，支持ID搜索
+    listOrders({
+      pageNum: 1,
+      pageSize: 20,
+      id: query // 根据订单ID搜索
+    }).then(response => {
+      orderOptions.value = response.rows
+      orderSearchLoading.value = false
+    }).catch(() => {
+      // 如果按ID搜索失败，尝试其他搜索方式
+      orderOptions.value = []
+      orderSearchLoading.value = false
+    })
+  } else {
+    orderOptions.value = []
+  }
+}
 
 /** 查询投诉商品列表 */
 function getList() {
@@ -662,17 +974,6 @@ function submitApprove() {
 function cancelApprove() {
   openApproveDialog.value = false
   reset()
-}
-
-/** 删除按钮操作 */
-function handleDelete(row) {
-  const _ids = row.id || ids.value
-  proxy.$modal.confirm('是否确认删除投诉商品编号为"' + _ids + '"的数据项？').then(function() {
-    return delComplaints(_ids)
-  }).then(() => {
-    getList()
-    proxy.$modal.msgSuccess("删除成功")
-  }).catch(() => {})
 }
 
 /** 导出按钮操作 */
