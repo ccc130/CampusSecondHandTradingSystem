@@ -583,7 +583,7 @@ function checkoutSelected() {
 // 跳转到商品列表页
 function goToProducts() {
   // 使用proxy访问router进行页面跳转到商品列表页
-  proxy.$router.push('/products')
+  proxy.$router.push('/index')
 }
 
 // 获取图片URL数组

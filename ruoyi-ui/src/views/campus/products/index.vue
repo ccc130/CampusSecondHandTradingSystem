@@ -305,32 +305,46 @@ function initProductTrendChart(products) {
   nextTick(() => {
     const chart = echarts.init(productTrendChartRef.value)
     
-    // 处理商品数据，按月份统计
-    const monthData = {}
-    const monthLabels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+    // 生成最近30天的日期和数据
+    const now = new Date();
+    const dates = [];
+    const counts = [];
     
-    // 初始化月份数据
-    for (let i = 1; i <= 12; i++) {
-      monthData[i] = 0
+    // 初始化30天的数据为0
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      
+      // 格式化日期为 MM-DD
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      const formattedDate = `${month}-${day}`;
+      
+      dates.push(formattedDate);
+      counts.push(0);
     }
     
-    // 统计每个月的商品发布数量
+    // 统计最近30天内每天的商品发布数量
     products.forEach(product => {
-      if (product.createTime) {
-        const date = new Date(product.createTime)
-        const month = date.getMonth() + 1 // getMonth() 返回 0-11，需要加1
-        if (monthData[month] !== undefined) {
-          monthData[month]++
+      if (product.createdAt) {
+        const productDate = new Date(product.createdAt);
+        const daysDiff = Math.floor((now - productDate) / (1000 * 60 * 60 * 24));
+        
+        // 只统计最近30天的数据
+        if (daysDiff >= 0 && daysDiff < 30) {
+          const dateIndex = 29 - daysDiff; // 计算在数组中的位置
+          counts[dateIndex]++;
         }
       }
-    })
-    
-    // 将数据转换为图表需要的格式
-    const seriesData = Object.keys(monthData).map(key => monthData[key])
+    });
     
     const option = {
       tooltip: {
-        trigger: 'axis'
+        trigger: 'axis',
+        formatter: (params) => {
+          const param = params[0];
+          return `${param.name}<br/>${param.seriesName}: ${param.value}`;
+        }
       },
       legend: {
         data: ['商品发布数']
@@ -349,7 +363,7 @@ function initProductTrendChart(products) {
       xAxis: {
         type: 'category',
         boundaryGap: false,
-        data: monthLabels
+        data: dates
       },
       yAxis: {
         type: 'value'
@@ -358,18 +372,25 @@ function initProductTrendChart(products) {
         {
           name: '商品发布数',
           type: 'line',
-          stack: '总量',
-          data: seriesData
+          smooth: true, // 平滑曲线
+          lineStyle: {
+            color: '#409EFF'
+          },
+          itemStyle: {
+            color: '#409EFF'
+          },
+          data: counts
         }
       ]
-    }
-    chart.setOption(option)
+    };
+    
+    chart.setOption(option);
     
     // 响应窗口大小变化
     window.addEventListener('resize', () => {
-      chart.resize()
-    })
-  })
+      chart.resize();
+    });
+  });
 }
 
 onMounted(() => {

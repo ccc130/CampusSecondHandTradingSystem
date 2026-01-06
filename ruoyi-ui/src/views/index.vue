@@ -606,7 +606,8 @@ const productForm = reactive({
   imageUrls: null,
   description: null,
   status: 1,
-  userId: null
+  userId: null,
+  createdAt: null
 })
 const productRules = {
   title: [
@@ -1309,7 +1310,8 @@ function resetProductForm() {
     imageUrls: null,
     description: null,
     status: 1,
-    userId: getCurrentUserId() // 设置当前用户为商品发布者
+    userId: getCurrentUserId(), // 设置当前用户为商品发布者
+    createdAt: null
   })
   if (productFormRef.value) {
     productFormRef.value.resetFields()
@@ -1329,7 +1331,8 @@ function submitProductForm() {
           getList()
         })
       } else {
-        // 发布新商品
+        // 发布新商品 - 自动设置创建时间
+        formData.createdAt = new Date().toISOString().split('T')[0] // 设置当前日期
         addProducts(formData).then(response => {
           proxy.$modal.msgSuccess("发布成功")
           productDialogVisible.value = false
