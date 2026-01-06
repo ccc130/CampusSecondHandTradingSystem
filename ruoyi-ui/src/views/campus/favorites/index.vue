@@ -76,7 +76,7 @@
         </div>
         
         <div class="favorite-item-image">
-          <img :src="favorite.productImageUrls" :alt="favorite.productTitle" @error="onImageError" />
+          <img :src="getSafeImageUrl(favorite.productImageUrls)" :alt="favorite.productTitle" @error="onImageError" />
         </div>
         
         <div class="favorite-item-info">
@@ -302,21 +302,22 @@ function getList() {
     const favoritePromises = favoriteItems.map(favorite => {
       return new Promise((resolve) => {
         // 获取商品详细信息
-        listProducts({ id: favorite.productId }).then(productResponse => {
-          if (productResponse.rows && productResponse.rows.length > 0) {
-            const product = productResponse.rows[0]
-            // 将商品信息合并到收藏项目中
-            Object.assign(favorite, {
-              productTitle: product.title,
-              productDescription: product.description,
-              productPrice: product.price,
-              productImageUrls: product.imageUrls,
-              productCondition: product.conditions,
-              productUserId: product.userId,
-              productStatus: product.status
-            })
-          }
-          resolve(favorite)
+        // 使用getProducts获取单个商品详情，而不是listProducts
+        getProducts(favorite.productId).then(productResponse => {
+          const product = productResponse.data;
+          console.log('获取到的商品信息:', product);
+          // 将商品信息合并到收藏项目中
+          Object.assign(favorite, {
+            productTitle: product.title,
+            productDescription: product.description,
+            productPrice: product.price,
+            productImageUrls: product.imageUrls,
+            productCondition: product.conditions,
+            productUserId: product.userId,
+            productStatus: product.status
+          })
+          console.log('合并后的收藏项目:', favorite);
+          resolve(favorite);
         }).catch(() => {
           // 如果获取商品信息失败，仍保留原有数据
           Object.assign(favorite, {
@@ -559,7 +560,7 @@ function getSafeImageUrl(imageUrl) {
   
   // 如果是数组，取第一张图片
   if (Array.isArray(imageUrl)) {
-    return imageUrl.length > 0 ? imageUrl[0] : 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
+    return imageUrl.length > 0 ? getSafeImageUrl(imageUrl[0]) : 'https://cube.elemecdn.com/e/fd/0fc72a63c3d713a467e6e7c37f6b4jpeg.jpeg';
   }
   
   // 如果是字符串但包含多个URL（可能以逗号或其他分隔符分隔），取第一个
@@ -587,7 +588,9 @@ function getSafeImageUrl(imageUrl) {
           return `${basePath}${imageUrl}`;
         }
       }
-      return imageUrl; // 其他相对路径直接返回
+      // 对于其他相对路径，同样需要添加基础路径
+      const basePath = import.meta.env.VITE_APP_BASE_API || '/dev-api';
+      return `${basePath}${imageUrl}`;
     }
     
     return imageUrl;
