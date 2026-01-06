@@ -398,6 +398,11 @@
               </div>
               <div class="review-content">{{ review.comment }}</div>
               <div class="review-time">{{ parseTime(review.createdAt, '{y}-{m}-{d}') }}</div>
+              <!-- 评论操作按钮 -->
+              <div class="review-actions" v-if="review.reviewerId === getCurrentUserId()">
+                <el-button size="small" type="primary" @click="startEditReview(review)">修改</el-button>
+                <el-button size="small" type="danger" @click="deleteReview(review)">删除</el-button>
+              </div>
             </div>
             
             <div v-if="productReviews.length === 0" class="no-reviews">
@@ -489,6 +494,29 @@
         </div>
       </template>
     </el-dialog>
+    
+    <!-- 编辑评论对话框 -->
+    <el-dialog title="编辑评论" v-model="editReviewDialogVisible" width="500px" append-to-body>
+      <el-form :model="editReviewForm" label-width="80px">
+        <el-form-item label="评论内容">
+          <el-input 
+            v-model="editReviewForm.comment" 
+            type="textarea" 
+            :rows="4"
+            placeholder="请输入评论内容" 
+          />
+        </el-form-item>
+        <el-form-item label="评分">
+          <el-rate v-model="editReviewForm.rating" :max="5" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="editReviewDialogVisible = false">取 消</el-button>
+          <el-button type="primary" @click="updateReview">确 定</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -499,7 +527,7 @@ import { addCarts } from "@/api/campus/carts"
 import { addFavorites, listFavorites, delFavorites } from "@/api/campus/favorites"
 import { listOrders, addOrders } from "@/api/campus/orders"
 import { addComplaints } from "@/api/campus/complaints"
-import { listReviews, addReviews } from "@/api/campus/reviews"
+import { listReviews, addReviews, delReviews, updateReviews, getReviews } from "@/api/campus/reviews"
 import { getUser } from "@/api/system/user"
 import useUserStore from '@/store/modules/user'
 import auth from '@/plugins/auth'
@@ -532,6 +560,13 @@ const userMap = ref({})
 const productReviews = ref([])
 const newReviewContent = ref('')
 const newReviewRating = ref(0)
+// 修改评论相关数据
+const editReviewDialogVisible = ref(false)
+const editReviewForm = reactive({
+  id: null,
+  comment: '',
+  rating: 0
+})
 // 图片相关状态
 const imageViewerVisible = ref(false)
 const currentImageUrlIndex = ref(0)
@@ -761,6 +796,67 @@ function submitReview() {
   }).catch(error => {
     proxy.$modal.msgError("获取订单信息失败：" + error.message)
   })
+}
+
+// 开始编辑评论
+function startEditReview(review) {
+  // 检查是否是当前用户发布的评论
+  if (review.reviewerId !== getCurrentUserId()) {
+    proxy.$modal.msgError("您只能修改自己的评论")
+    return
+  }
+  
+  // 填充表单数据
+  editReviewForm.id = review.id
+  editReviewForm.comment = review.comment
+  editReviewForm.rating = review.rating
+  
+  // 显示编辑对话框
+  editReviewDialogVisible.value = true
+}
+
+// 修改评论
+function updateReview() {
+  if (!editReviewForm.comment || !editReviewForm.rating) {
+    proxy.$modal.msgError("请填写评论内容和评分")
+    return
+  }
+  
+  const updateData = {
+    id: editReviewForm.id,
+    comment: editReviewForm.comment,
+    rating: editReviewForm.rating
+  }
+  
+  updateReviews(updateData).then(response => {
+    proxy.$modal.msgSuccess("评论修改成功")
+    editReviewDialogVisible.value = false
+    // 重新获取评论列表
+    getProductReviews(selectedProduct.value.id)
+    // 清空编辑表单
+    editReviewForm.id = null
+    editReviewForm.comment = ''
+    editReviewForm.rating = 0
+  }).catch(error => {
+    proxy.$modal.msgError("评论修改失败: " + error.message)
+  })
+}
+
+// 删除评论
+function deleteReview(review) {
+  // 检查是否是当前用户发布的评论
+  if (review.reviewerId !== getCurrentUserId()) {
+    proxy.$modal.msgError("您只能删除自己的评论")
+    return
+  }
+  
+  proxy.$modal.confirm(`是否确认删除编号为 "${review.id}" 的评论？`).then(() => {
+    return delReviews(review.id)
+  }).then(() => {
+    proxy.$modal.msgSuccess("删除成功")
+    // 重新获取评论列表
+    getProductReviews(selectedProduct.value.id)
+  }).catch(() => {})
 }
 
 // 更新商品状态
@@ -1680,6 +1776,13 @@ onMounted(() => {
       }
     }
   }
+}
+
+.review-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 // 支付确认对话框样式
