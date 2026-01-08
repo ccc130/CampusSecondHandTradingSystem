@@ -896,6 +896,47 @@ function handleUpdate(row) {
   const _id = row.id || ids.value
   getComplaints(_id).then(response => {
     form.value = response.data
+    // 加载投诉人、被投诉人和处理人的用户信息到选项中，确保选择器能够正确显示用户名称
+    const userIdsToLoad = [response.data.complainantId, response.data.accusedId, response.data.handlerId].filter(id => id)
+    userIdsToLoad.forEach(userId => {
+      if (!userOptions.value.some(user => user.userId === userId)) {
+        getUser(userId).then(userResponse => {
+          userOptions.value.push(userResponse.data)
+        }).catch(() => {
+          // 如果获取用户信息失败，创建一个临时用户对象
+          userOptions.value.push({
+            userId: userId,
+            nickName: `用户${userId}`,
+            userName: `用户${userId}`
+          })
+        })
+      }
+    })
+    // 加载相关商品信息
+    if (response.data.productId && !productOptions.value.some(product => product.id === response.data.productId)) {
+      getProducts(response.data.productId).then(productResponse => {
+        productOptions.value.push(productResponse.data)
+      }).catch(() => {
+        // 如果获取商品信息失败，创建一个临时商品对象
+        productOptions.value.push({
+          id: response.data.productId,
+          title: `商品${response.data.productId}`
+        })
+      })
+    }
+    // 加载相关订单信息
+    if (response.data.orderId && !orderOptions.value.some(order => order.id === response.data.orderId)) {
+      getOrders(response.data.orderId).then(orderResponse => {
+        orderOptions.value.push(orderResponse.data)
+      }).catch(() => {
+        // 如果获取订单信息失败，创建一个临时订单对象
+        orderOptions.value.push({
+          id: response.data.orderId,
+          buyerId: null,
+          productId: null
+        })
+      })
+    }
     open.value = true
     title.value = "修改投诉商品"
   })

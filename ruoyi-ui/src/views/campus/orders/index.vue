@@ -665,6 +665,34 @@ function handleUpdate(row) {
   const _id = row.id || ids.value
   getOrders(_id).then(response => {
     form.value = response.data
+    // 加载买家和卖家的用户信息到选项中，确保选择器能够正确显示用户名称
+    const userIdsToLoad = [response.data.buyerId, response.data.sellerId].filter(id => id)
+    userIdsToLoad.forEach(userId => {
+      if (!userOptions.value.some(user => user.userId === userId)) {
+        getUser(userId).then(userResponse => {
+          userOptions.value.push(userResponse.data)
+        }).catch(() => {
+          // 如果获取用户信息失败，创建一个临时用户对象
+          userOptions.value.push({
+            userId: userId,
+            nickName: `用户${userId}`,
+            userName: `用户${userId}`
+          })
+        })
+      }
+    })
+    // 加载相关商品信息到选项中，确保选择器能够正确显示商品名称
+    if (response.data.productId && !productOptions.value.some(product => product.id === response.data.productId)) {
+      getProducts(response.data.productId).then(productResponse => {
+        productOptions.value.push(productResponse.data)
+      }).catch(() => {
+        // 如果获取商品信息失败，创建一个临时商品对象
+        productOptions.value.push({
+          id: response.data.productId,
+          title: `商品${response.data.productId}`
+        })
+      })
+    }
     open.value = true
     title.value = "修改我的订单"
   })
