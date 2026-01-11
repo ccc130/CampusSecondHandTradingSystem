@@ -181,7 +181,7 @@
               size="small"
               icon="Edit"
               @click="handleUpdate(product)"
-              v-if="(product.userId === getCurrentUserId() || auth.hasPermi(['system:role:list'])) && auth.hasPermi('campus:products:edit')"
+              v-if="checkRole(['admin', 'admin2']) || (product.userId === getCurrentUserId() || auth.hasPermi(['system:role:list'])) && auth.hasPermi('campus:products:edit')"
             >
               编辑
             </el-button>
@@ -529,6 +529,7 @@ import { listOrders, addOrders } from "@/api/campus/orders"
 import { addComplaints } from "@/api/campus/complaints"
 import { listReviews, addReviews, delReviews, updateReviews, getReviews } from "@/api/campus/reviews"
 import { getUser } from "@/api/system/user"
+import { checkRole } from '@/utils/permission'
 import useUserStore from '@/store/modules/user'
 import auth from '@/plugins/auth'
 import payImage from "@/assets/images/pay.jpg"
@@ -1278,14 +1279,17 @@ function handleUpdate(product) {
   const hasEditPermission = auth.hasPermi('campus:products:edit')
   const hasSystemRoleListPermission = auth.hasPermi(['system:role:list'])
   
-  // 如果用户没有 system:role:list 权限，则只能编辑自己发布的商品
-  if (!hasSystemRoleListPermission && product.userId !== currentUserId) {
+  // 检查用户是否为超级管理员
+  const isAdmin = checkRole(['admin', 'admin2'])
+  
+  // 如果用户不是超级管理员且没有 system:role:list 权限，则只能编辑自己发布的商品
+  if (!isAdmin && !hasSystemRoleListPermission && product.userId !== currentUserId) {
     proxy.$modal.msgError("您没有权限编辑此商品，仅能修改自己发布的商品")
     return
   }
   
-  // 如果用户既没有编辑权限也不是商品发布者，则拒绝访问
-  if (!hasEditPermission && product.userId !== currentUserId) {
+  // 如果用户既不是超级管理员、又没有编辑权限也不是商品发布者，则拒绝访问
+  if (!isAdmin && !hasEditPermission && product.userId !== currentUserId) {
     proxy.$modal.msgError("您没有权限编辑此商品")
     return
   }

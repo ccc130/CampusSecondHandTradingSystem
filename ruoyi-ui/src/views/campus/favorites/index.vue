@@ -87,7 +87,7 @@
             <span class="favorite-item-condition">成新度: {{ getConditionText(favorite.productCondition) }}</span>
           </div>
           <div class="favorite-item-seller">
-            <span>卖家: {{ favorite.productUserId }}</span>
+            <span>卖家: {{ getUserName(favorite.productUserId) }}</span>
             <span>收藏: {{ parseTime(favorite.createdAt, '{y}-{m}-{d}') }}</span>
           </div>
         </div>
@@ -155,6 +155,7 @@
           全选
         </el-checkbox>
         <el-button link @click="handleBatchDelete" :disabled="!hasSelected">删除选中</el-button>
+  
       </div>
       <div class="favorites-footer-right">
         <div class="favorites-total-info">
@@ -207,8 +208,14 @@ import { addReviews } from "@/api/campus/reviews"
 import { getUser, listUser } from "@/api/system/user"
 import useUserStore from '@/store/modules/user'
 import { checkPermi } from '@/utils/permission'
+import { onMounted, onUnmounted } from 'vue'
 
 const { proxy } = getCurrentInstance()
+
+// 添加自动刷新相关变量
+const autoRefreshInterval = ref(30000) // 自动刷新间隔，默认30秒
+const autoRefreshEnabled = ref(true) // 是否启用自动刷新
+let refreshTimer = null // 定时器引用
 
 const favoritesList = ref([])
 const open = ref(false)
@@ -329,17 +336,94 @@ function getList() {
             productUserId: null,
             productStatus: null
           })
+          // 即使商品信息获取失败，也要尝试获取用户信息
+          if (favorite.productUserId) {
+            getUser(favorite.productUserId).then(userResponse => {
+              const user = userResponse.data
+              userMap.value[favorite.productUserId] = user.nickName || user.userName || `用户${favorite.productUserId}`
+            }).catch(() => {
+              userMap.value[favorite.productUserId] = `用户${favorite.productUserId}`
+            })
+          }
           resolve(favorite)
         })
       })
     })
     
     Promise.all(favoritePromises).then(results => {
-      favoriteProducts.value = results
-      loading.value = false
+      // 为每个收藏项获取卖家用户信息并缓存到userMap中
+      const userPromises = []
+      results.forEach(favorite => {
+        if (favorite.productUserId && !userMap.value[favorite.productUserId]) {
+          // 如果用户信息尚未缓存，则获取用户信息
+          const userPromise = getUser(favorite.productUserId).then(userResponse => {
+            const user = userResponse.data
+            userMap.value[favorite.productUserId] = user.nickName || user.userName || `用户${favorite.productUserId}`
+          }).catch(() => {
+            userMap.value[favorite.productUserId] = `用户${favorite.productUserId}`
+          })
+          userPromises.push(userPromise)
+        }
+      })
+      
+      // 等待所有用户信息获取完成后再更新UI
+      Promise.all(userPromises).then(() => {
+        // 检测是否有数据变化，如果有则显示更新提示
+        const oldCount = favoriteProducts.value.length
+        const newCount = results.length
+        
+        favoriteProducts.value = results
+        loading.value = false
+        
+        // 如果启用了自动刷新且数据有变化，显示提示
+        if (autoRefreshEnabled.value && (oldCount !== newCount)) {
+          const countDiff = newCount - oldCount
+        }
+      })
     })
   })
 }
+
+// 启用自动刷新
+function enableAutoRefresh() {
+  if (autoRefreshEnabled.value) {
+    disableAutoRefresh() // 先清除现有定时器
+  }
+  autoRefreshEnabled.value = true
+  refreshTimer = setInterval(() => {
+    getList()
+  }, autoRefreshInterval.value)
+}
+
+// 禁用自动刷新
+function disableAutoRefresh() {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+  autoRefreshEnabled.value = false
+}
+
+// 切换自动刷新状态
+function toggleAutoRefresh() {
+  if (autoRefreshEnabled.value) {
+    disableAutoRefresh()
+  } else {
+    enableAutoRefresh()
+  }
+}
+
+// 在组件挂载后启用自动刷新
+onMounted(() => {
+  if (autoRefreshEnabled.value) {
+    enableAutoRefresh()
+  }
+})
+
+// 在组件卸载前清除定时器
+onUnmounted(() => {
+  disableAutoRefresh()
+})
 
 // 取消按钮
 function cancel() {
@@ -426,7 +510,8 @@ function addToCart(favorite) {
 // 立即购买
 function buyNow(favorite) {
   // 这里应该跳转到订单确认页面或直接购买
-  proxy.$modal.confirm(`确定要立即购买 ${favorite.productTitle} 吗？`)
+  const sellerName = getUserName(favorite.productUserId)
+  proxy.$modal.confirm(`确定要立即购买 ${favorite.productTitle}（卖家：${sellerName}）吗？`)
     .then(() => {
       // 创建订单
       const orderData = {
@@ -450,6 +535,27 @@ function buyNow(favorite) {
     })
 }
 
+// 更新商品状态
+function updateProductStatus(productId, status) {
+  getProducts(productId).then(response => {
+    const product = response.data;
+    product.status = status;
+    updateProducts(product).then(updateResponse => {
+      console.log("商品状态已更新", updateResponse);
+      // 同时更新本地数据
+      favoriteProducts.value.forEach(fav => {
+        if (fav.productId === productId) {
+          fav.productStatus = status;
+        }
+      });
+    }).catch(error => {
+      console.error("更新商品状态失败", error);
+    })
+  }).catch(error => {
+    console.error("获取商品信息失败", error);
+  });
+}
+
 // 查看商品详情
 function viewProduct(favorite) {
   // 获取商品详细信息并显示详情弹窗
@@ -457,6 +563,16 @@ function viewProduct(favorite) {
     const product = response.data
     selectedProduct.value = product
     productDetailVisible.value = true
+    
+    // 预加载卖家用户信息
+    if (product.userId && !userMap.value[product.userId]) {
+      getUser(product.userId).then(userResponse => {
+        const user = userResponse.data
+        userMap.value[product.userId] = user.nickName || user.userName || `用户${product.userId}`
+      }).catch(() => {
+        userMap.value[product.userId] = `用户${product.userId}`
+      })
+    }
     
     // 加载商品评论
     getProductReviews(product.id)
@@ -535,16 +651,21 @@ function getConditionText(condition) {
 
 // 获取用户名称
 function getUserName(userId) {
-  if (userMap.value[userId]) {
+  if (userId && userMap.value[userId]) {
     return userMap.value[userId]
   }
-  // 获取用户信息
-  getUser(userId).then(response => {
-    userMap.value[userId] = response.data.nickName || response.data.userName || `用户${userId}`
-  }).catch(() => {
-    userMap.value[userId] = `用户${userId}`
-  })
-  return userMap.value[userId] || `用户${userId}`
+  // 如果用户信息尚未缓存，返回默认值并触发获取
+  if (userId) {
+    // 异步获取用户信息
+    getUser(userId).then(response => {
+      const user = response.data
+      userMap.value[userId] = user.nickName || user.userName || `用户${userId}`
+    }).catch(() => {
+      userMap.value[userId] = `用户${userId}`
+    })
+    return `用户${userId}` // 返回默认值直到异步获取完成
+  }
+  return '未知用户'
 }
 
 // 获取当前用户ID
